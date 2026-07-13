@@ -40,9 +40,9 @@ export function ChatWindowView({ chatId }: { chatId: number }) {
   }, [messages.length]);
 
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-md flex-col">
+    <div className="flex h-full w-full flex-col">
       <header className="flex items-center gap-2 border-b p-3">
-        <Link href="/messages" aria-label="Назад к диалогам">
+        <Link href="/messages" aria-label="Назад к диалогам" className="md:hidden">
           <ChevronLeft className="size-5" />
         </Link>
         {other ? (

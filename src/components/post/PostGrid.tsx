@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import type { ReactNode } from "react";
 import { useInView } from "react-intersection-observer";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +17,8 @@ interface PostGridProps {
   isFetchingNextPage: boolean;
   onLoadMore: () => void;
   emptyMessage: string;
+  /** Богатое пустое состояние (иконка + заголовок), переопределяет emptyMessage. */
+  emptyState?: ReactNode;
 }
 
 export function PostGrid({
@@ -26,6 +29,7 @@ export function PostGrid({
   isFetchingNextPage,
   onLoadMore,
   emptyMessage,
+  emptyState,
 }: PostGridProps) {
   const { ref, inView } = useInView();
 
@@ -54,6 +58,7 @@ export function PostGrid({
   }
 
   if (posts.length === 0) {
+    if (emptyState) return <>{emptyState}</>;
     return <p className="py-16 text-center text-sm text-muted-foreground">{emptyMessage}</p>;
   }
 
