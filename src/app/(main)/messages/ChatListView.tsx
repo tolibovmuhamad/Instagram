@@ -9,12 +9,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChats, useDeleteChat } from "@/features/chat/hooks";
 import type { ChatSummary } from "@/features/chat/types";
+import { getNoteBackground } from "@/features/notes/data";
 import { useMyProfile } from "@/features/users/hooks";
 import { cn } from "@/lib/utils";
 import { resolveImageUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
+import { useNotesStore } from "@/store/notes";
 
 import { NewChatDialog } from "./NewChatDialog";
+import { NoteComposer } from "./NoteComposer";
 
 function getOtherParticipant(chat: ChatSummary, currentUserId: string | undefined) {
   if (chat.sendUserId === currentUserId) {
@@ -34,7 +37,9 @@ export function ChatListView() {
   const pathname = usePathname();
   const chatsQuery = useChats();
   const deleteChat = useDeleteChat();
+  const myNote = useNotesStore((state) => (currentUserId ? state.notes[currentUserId] : undefined));
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [isNoteOpen, setIsNoteOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const chats = useMemo(() => chatsQuery.data ?? [], [chatsQuery.data]);
@@ -92,37 +97,51 @@ export function ChatListView() {
         </div>
       </div>
 
-      {/* Заметки: кружки участников (упрощённо, без текста заметок — их нет в API). */}
-      {participants.length > 0 && (
-        <div className="flex gap-4 overflow-x-auto px-4 py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex w-16 shrink-0 flex-col items-center gap-1.5">
-            <div className="relative">
+      {/* Заметки: свой кружок «Ваша заметка» (создание) + участники диалогов. */}
+      <div className="flex gap-4 overflow-x-auto px-4 py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <button
+          type="button"
+          onClick={() => setIsNoteOpen(true)}
+          className="flex w-16 shrink-0 flex-col items-center gap-1.5"
+        >
+          <div className="relative">
+            {myNote ? (
+              <span
+                className="absolute -top-3 left-1/2 z-10 max-w-[84px] -translate-x-1/2 truncate rounded-2xl px-2 py-0.5 text-[10px] shadow-sm"
+                style={{
+                  background: getNoteBackground(myNote.background).style,
+                  color: getNoteBackground(myNote.background).text === "light" ? "#fff" : undefined,
+                }}
+              >
+                {myNote.text || myNote.music?.title || "♪"}
+              </span>
+            ) : (
               <span className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground shadow-sm">
                 Что нового…
               </span>
-              <Avatar className="size-14">
-                <AvatarImage src={resolveImageUrl(myProfile.data?.image)} alt={userName} />
-                <AvatarFallback>{userName.slice(0, 1).toUpperCase()}</AvatarFallback>
-              </Avatar>
-            </div>
-            <span className="max-w-full truncate text-xs text-muted-foreground">Ваша заметка</span>
+            )}
+            <Avatar className="size-14">
+              <AvatarImage src={resolveImageUrl(myProfile.data?.image)} alt={userName} />
+              <AvatarFallback>{userName.slice(0, 1).toUpperCase()}</AvatarFallback>
+            </Avatar>
           </div>
+          <span className="max-w-full truncate text-xs text-muted-foreground">Ваша заметка</span>
+        </button>
 
-          {participants.slice(0, 10).map((user) => (
-            <Link
-              key={user.userId}
-              href={`/profile/${user.userId}`}
-              className="flex w-16 shrink-0 flex-col items-center gap-1.5"
-            >
-              <Avatar className="size-14">
-                <AvatarImage src={resolveImageUrl(user.userImage)} alt={user.userName} />
-                <AvatarFallback>{user.userName.slice(0, 1).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <span className="max-w-full truncate text-xs">{user.userName}</span>
-            </Link>
-          ))}
-        </div>
-      )}
+        {participants.slice(0, 10).map((user) => (
+          <Link
+            key={user.userId}
+            href={`/profile/${user.userId}`}
+            className="flex w-16 shrink-0 flex-col items-center gap-1.5"
+          >
+            <Avatar className="size-14">
+              <AvatarImage src={resolveImageUrl(user.userImage)} alt={user.userName} />
+              <AvatarFallback>{user.userName.slice(0, 1).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <span className="max-w-full truncate text-xs">{user.userName}</span>
+          </Link>
+        ))}
+      </div>
 
       {/* Заголовок раздела. */}
       <div className="flex items-center justify-between px-6 pb-1 pt-3">
@@ -184,6 +203,7 @@ export function ChatListView() {
       </div>
 
       <NewChatDialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen} />
+      {isNoteOpen && <NoteComposer onClose={() => setIsNoteOpen(false)} />}
     </div>
   );
 }

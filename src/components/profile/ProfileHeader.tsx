@@ -37,11 +37,7 @@ const grayButtonClass =
 
 // Пункты меню шестерёнки, повторяют выпадашку Instagram. Часть — заглушки (нет
 // соответствующего бэкенда): при клике показываем тост.
-const settingsPlaceholderItems = [
-  "Приложения и сайты",
-  "QR-код",
-  "Уведомления",
-];
+const settingsPlaceholderItems = ["QR-код", "Уведомления"];
 const settingsPlaceholderItems2 = ["Meta Verified", "Родительский контроль", "Входы в аккаунт"];
 const settingsMenuItemClass = "cursor-pointer rounded-none px-4 py-3.5 text-[15px]";
 
@@ -104,6 +100,12 @@ export function ProfileHeader({ userId, profile, isOwnProfile, isSubscriber }: P
                     sideOffset={8}
                     className="w-[300px] overflow-hidden rounded-2xl p-0 shadow-xl"
                   >
+                    <DropdownMenuItem
+                      render={<Link href="/settings?section=apps" />}
+                      className={settingsMenuItemClass}
+                    >
+                      Приложения и сайты
+                    </DropdownMenuItem>
                     {settingsPlaceholderItems.map((label) => (
                       <DropdownMenuItem
                         key={label}
