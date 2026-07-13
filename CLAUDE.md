@@ -1,1 +1,181 @@
-@AGENTS.md
+# CLAUDE.md
+
+Этот файл даёт указания Claude Code (claude.ai/code) при работе с кодом в этом репозитории.
+
+## Текущее состояние репозитория
+
+Репозиторий пока **содержит только спецификацию**. Единственный содержательный файл — `TZ_Instagram_Frontend (1).md` — это техническое задание (ТЗ, на русском) на **фронтенд** клона Instagram. Ни `package.json`, ни `src/`, ни какого-либо тулинга ещё нет — **первая задача — развернуть Next.js-приложение по спецификации** (см. раздел «Этапы разработки»).
+
+ТЗ — источник истины. Если этот файл и ТЗ расходятся, перечитай ТЗ и следуй ему. Данный файл — краткая выжимка ключевых интеграционных нюансов, чтобы не перечитывать всё ТЗ каждый раз.
+
+## Кратко о проекте
+
+Нужно построить адаптивный веб-клиент, повторяющий UX Instagram (лента, сторис, профиль, лайки/комментарии, подписки, личные сообщения), поверх **уже готового** бэкенда. Разрабатывается **только фронтенд**.
+
+- **Формат:** учебный/командный pet-project с возможностью деплоя (Vercel/Netlify).
+- **Цель:** функциональный адаптивный клиент, максимально близкий к оригинальному Instagram по виду и UX, полностью покрывающий доступные возможности backend API.
+- **Дизайн-референс:** веб-версия оригинального Instagram — используется только как UX-эталон и источник вдохновения (общая раскладка и паттерны), **без официального логотипа и брендинга** Meta/Instagram.
+
+## Бэкенд (НЕ разрабатываем, только интегрируемся)
+
+- ASP.NET Core Web API, PostgreSQL + EF Core, JWT Bearer, Clean Architecture, AutoMapper.
+- Swagger: https://instagram-api.softclub.tj/swagger/index.html
+- **Realtime на бэкенде отсутствует.** Нет SignalR/WebSocket. Чат и уведомления реализуются через REST + периодический опрос (polling — React Query `refetchInterval`), **никогда через сокеты**.
+- CORS на бэкенде уже разрешает `http://localhost:3000` — dev-сервер поднимается там без доп. настройки.
+
+## Технологический стек (из ТЗ)
+
+**Основа:** Next.js (App Router) + TypeScript · Axios · TanStack Query (серверное состояние) · Zustand (авторизация + клиентский UI-стейт: модалки, тема) · Tailwind CSS + shadcn/ui · React Hook Form + Zod · JWT.
+
+Типы API **генерировать из Swagger** через `openapi-typescript`/`orval`, а не писать руками.
+
+**Рекомендованные библиотеки (из ТЗ):**
+
+| Библиотека | Назначение |
+|---|---|
+| React Hook Form + Zod | формы с валидацией (регистрация, логин, создание поста, редактирование профиля) |
+| openapi-typescript / orval | генерация TS-типов и клиента прямо из Swagger |
+| lucide-react | иконки (совместимо с shadcn) |
+| sonner | тосты об ошибках и успехах |
+| framer-motion | анимации (лайк, появление постов, переходы) |
+| date-fns / dayjs | относительные даты («5 минут назад») |
+| react-easy-crop | кроп изображений перед загрузкой (аватар, посты) |
+| browser-image-compression | сжатие изображений перед отправкой |
+| react-intersection-observer | infinite scroll (лента, reels, комментарии) |
+| next/image | оптимизация изображений |
+
+**Dev-инструменты:** ESLint, Prettier, Vitest/Jest + Testing Library, Playwright (e2e). Как только появится `package.json` — предпочитать его скрипты, а не выдумывать команды.
+
+## Конвенции API бэкенда (критично для интеграции)
+
+Каждый ответ обёрнут в стандартный конверт — **разворачивать `data` в axios-слое**, показывать `errors[]` через тост:
+
+```json
+{ "data": {}, "errors": [], "statusCode": 200 }
+```
+
+Пагинированные списки дополнительно содержат `pageNumber`, `pageSize`, `totalPage`, `totalRecord` — **infinite scroll строить по ним**, а не по клиентскому подсчёту.
+
+- Создание поста и сторис — **multipart/form-data** (изображения + текст + категории).
+- Авторизация — под `/Account` (`register`, `login` → JWT). Внимание к нестандартным глаголам: бэкенд использует **`DELETE`** для ForgotPassword/ResetPassword и **`PUT`** для ChangePassword — повторять эти глаголы точно.
+
+## Эндпоинты, которые могут быть отключены
+
+Часть модулей бэкенда закомментирована на сервере. **Проверяй доступность перед подключением**; 404 здесь — не обязательно баг фронтенда:
+
+- **`/FollowingRelationShip`** (подписаться/отписаться, списки подписчиков) — на момент ТЗ был закомментирован.
+- Модуль **`UserSetting`** — полностью закомментирован; возможно, вне MVP.
+
+## Модель данных (по реальному бэкенду)
+
+| Сущность | Ключевые поля |
+|---|---|
+| **User** | id, userName, email, dateRegistred, userType (Personal / Creator / Business) |
+| **UserProfile** | userId, firstName, lastName, image (аватар), gender, dob, occupation, about, locationId |
+| **Location** | city, state, zipCode, country |
+| **FollowingRelationShip** | userId, followingId, dateFollowed |
+| **Post** | postId, userId, title, content, datePublished, images[], categories[] |
+| **Image** | imageId, postId, imageName |
+| **Category** | categoryId, categoryName |
+| **PostComment** | postCommentId, postId, userId, comment, dateCommented (+ лайк комментария) |
+| **PostLike / PostFavorite / PostView** | лайки, сохранённые, просмотры (агрегаты + список пользователей) |
+| **Story** | id, fileName, postId, createAt, userId, views[], likes[] |
+| **Chat** | chatId, sendUserId, receiveUserId, messages[] |
+| **Message** | messageId, chatId, userId, messageText, sendMassageDate, file |
+| **SearchHistory / UserSearchHistory** | история поиска по тексту и по пользователям |
+
+## Функциональные модули и эндпоинты
+
+### Авторизация и аккаунт (`/Account`)
+`POST register` · `POST login` → JWT · `DELETE ForgotPassword` · `DELETE ResetPassword` · `PUT ChangePassword`.
+Экраны: вход, регистрация, восстановление пароля, смена пароля в настройках.
+
+### Профиль (`/UserProfile`, `/User`)
+`GET get-my-profile` · `GET get-user-profile-by-id` · `GET get-is-follow-user-profile-by-id` · `PUT update-user-profile` · `PUT/DELETE …-user-image-profile` · `GET get-post-favorites` · `GET /User/get-users` · история поиска (`add/get/delete-search-history(ies)`, `…-user-search-history(ies)`).
+Экраны: профиль (свой/чужой), редактирование, поиск пользователей с историей, сохранённые посты.
+
+### Посты (`/Post`)
+`GET get-posts` · `GET get-following-post` · `GET get-reels` · `GET get-post-by-id` · `GET get-my-posts` · `POST add-post` (multipart) · `DELETE delete-post` · `POST like-post` · `POST view-post` · `POST add-comment` · `DELETE delete-comment` · `POST add-post-favorite`.
+Экраны: главная лента, страница поста с комментариями, создание поста (кроп/превью), Reels, сетка постов в профиле.
+
+### Сторис (`/Story`)
+`GET get-stories` · `GET get-user-stories/{userId}` · `GET get-my-stories` · `GET GetStoryById` · `POST AddStories` · `DELETE DeleteStory` · `POST LikeStory` · `POST add-story-view`.
+Экраны: лента аватарок-сторис над лентой, полноэкранный вьюер с прогресс-баром, создание сторис.
+
+### Подписки (`/FollowingRelationShip`) — см. предупреждение выше
+`GET get-subscribers` · `GET get-subscriptions` · `POST add-following-relation-ship` · `DELETE delete-following-relation-ship`.
+Экраны: списки подписчиков/подписок, кнопка «Подписаться/Отписаться» в профиле и под постом.
+
+### Личные сообщения (`/Chat`)
+`GET get-chats` · `GET get-chat-by-id` · `POST create-chat` · `PUT send-message` (текст + файл) · `DELETE delete-message` · `DELETE delete-chat`.
+Экраны: список диалогов, окно переписки (обновление — через polling).
+
+### Геолокация (`/Location`)
+CRUD: `get-Locations`, `get-Location-by-id`, `add-Location`, `update-Location`, `delete-Location`.
+Использование: выбор города в профиле; привязка к посту — уточнить у backend-команды.
+
+## Нефункциональные требования
+
+- **Адаптивность обязательна:** корректно от 360px до 1920px+; три раскладки навигации (desktop-сайдбар / tablet / mobile нижний таб-бар), как в оригинале.
+- **Производительность:** ленивая загрузка (`next/image`), виртуализация длинных списков при необходимости, infinite scroll вместо кнопочной пагинации.
+- **Безопасность:** JWT не хранить в localStorage «как есть» без осознанного решения команды (обсудить httpOnly cookie vs память + refresh); экранировать пользовательский контент (XSS в комментариях/подписях).
+- **Обработка ошибок:** единый обработчик (interceptor axios + `errors[]`), понятные сообщения через toast; у каждого экрана состояния loading/error/empty.
+- **A11y:** alt у изображений, фокус-стили, клавиатурная навигация в модалках.
+- **Тема:** рекомендуется светлая/тёмная (Tailwind + shadcn упрощают).
+
+## Ориентиры по UI/UX (из оригинального Instagram)
+
+- **Раскладка:** слева сайдбар навигации (Главная, Поиск, Reels, Сообщения, Уведомления, Создать, Профиль) на десктопе; нижний таб-бар на мобильном.
+- **Лента:** центральная колонка постов + панель сторис сверху + правый блок «рекомендации/подписки» на широких экранах.
+- **Пост:** шапка (аватар, ник, локация, «…»), медиа-карусель, панель действий (лайк, комментарий, поделиться, сохранить), подпись, превью комментариев, дата.
+- **Сторис:** полноэкранный просмотр, прогресс-бар сегментов, переход клик/свайп влево-вправо, реакция и просмотры (для автора).
+- **Профиль:** аватар, статистика (посты/подписчики/подписки), «Редактировать профиль»/«Подписаться», вкладки (посты сеткой, сохранённое, отмеченные), bio.
+- **Создание поста:** загрузка/кроп (1:1, 4:5, 16:9), подпись, категория/локация.
+- **Модалки:** подписчики/подписки, лайкнувшие, комментарии (на десктопе — модалка, на мобильном — отдельный экран).
+
+## Планируемая структура проекта (цель после скаффолдинга)
+
+```
+src/
+  app/                    роуты Next.js (App Router)
+    (auth)/               login, register, forgot-password
+    (main)/               feed, explore, reels, profile/[id], post/[id], messages
+  components/ui/          примитивы shadcn
+  components/{post,story,chat,profile}/
+  features/               доменные модули (posts, stories, users, chat, auth)
+  store/                  zustand-сторы (auth, ui)
+  lib/api/                axios-инстанс, interceptors, сгенерированные из Swagger типы
+  lib/hooks/              обёртки-хуки React Query
+  lib/utils/
+```
+
+**Архитектурный замысел:** доменная логика — в `features/`; переиспользуемые презентационные части — в `components/ui`; весь доступ к серверу идёт через axios-инстанс в `lib/api` (разворачивание конверта + JWT + обработчик ошибок в одном месте) и потребляется исключительно через хуки React Query в `lib/hooks`.
+
+## Этапы разработки (предлагаемая последовательность)
+
+| Этап | Содержание |
+|---|---|
+| 1. Инфраструктура | Инициализация Next.js, Tailwind, shadcn, axios + React Query провайдер, генерация типов из Swagger |
+| 2. Авторизация | Логин, регистрация, хранение и обновление JWT, защищённые роуты |
+| 3. Профиль | Просмотр/редактирование своего профиля, аватар, чужой профиль |
+| 4. Лента и посты | Лента, создание поста, лайки, комментарии, просмотр поста |
+| 5. Сторис | Лента сторис, вьюер, создание сторис |
+| 6. Подписки | Подписаться/отписаться, списки подписчиков/подписок |
+| 7. Поиск и Reels | Поиск пользователей с историей, лента Reels |
+| 8. Сообщения | Список чатов, переписка |
+| 9. Полировка | Тёмная тема, анимации, адаптивность, обработка ошибок, тесты |
+
+## Критерии приёмки (Definition of Done)
+
+- Все экраны реализованы и адаптивны (desktop/mobile).
+- Все эндпоинты из ТЗ подключены, обрабатывают loading/error/empty.
+- Авторизация защищает приватные роуты; токен корректно обновляется/удаляется при выходе.
+- Нет console-ошибок в production-сборке; ESLint без критических предупреждений.
+- Код разбит по фичам; переиспользуемый UI вынесен в `components/ui`.
+
+## Открытые вопросы (уточнить с backend-командой)
+
+1. Модуль подписок (`FollowingRelationShip`) — методы закомментированы, когда включат?
+2. Нужна ли привязка `Location` к посту (сейчас только к `UserProfile`)?
+3. Планируется ли realtime (SignalR) для чата/уведомлений, или polling — постоянное решение?
+4. Модуль `UserSetting` полностью закомментирован — нужен ли он в MVP?
