@@ -14,7 +14,7 @@ test.describe("Авторизация", () => {
     await page.fill("#password", USER.password);
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL("/");
-    await expect(page.getByText("Все", { exact: true })).toBeVisible();
+    await expect(page.getByText("Для вас", { exact: true })).toBeVisible();
 
     await page.goto("/settings");
     await expect(page.getByText(USER.userName)).toBeVisible();

@@ -44,7 +44,7 @@ export function StoryAvatarRail() {
 
   if (storiesQuery.isPending) {
     return (
-      <div className="flex gap-4 overflow-x-auto p-4">
+      <div className="flex gap-4 overflow-x-auto py-4">
         {Array.from({ length: 5 }).map((_, index) => (
           <Skeleton key={index} className="size-16 shrink-0 rounded-full" />
         ))}
@@ -53,7 +53,7 @@ export function StoryAvatarRail() {
   }
 
   return (
-    <div className="flex gap-4 overflow-x-auto border-b p-4">
+    <div className="flex gap-4 overflow-x-auto py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="flex shrink-0 flex-col items-center gap-1">
         <div
           className={cn(
@@ -89,7 +89,7 @@ export function StoryAvatarRail() {
             <Plus className="size-3.5" />
           </button>
         </div>
-        <span className="text-xs text-muted-foreground">Вы</span>
+        <span className="max-w-16 truncate text-xs text-muted-foreground">Ваша история</span>
         <input
           ref={fileInputRef}
           type="file"

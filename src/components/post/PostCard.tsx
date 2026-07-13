@@ -1,8 +1,7 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
-import { ru } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
@@ -13,27 +12,26 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDeletePost } from "@/features/posts/hooks";
 import type { Post } from "@/features/posts/types";
+import { formatTimeAgoShort } from "@/lib/utils/date";
 import { resolveImageUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 
 import { PostActionsBar } from "./PostActionsBar";
 import { PostMedia } from "./PostMedia";
 
-function pluralizeLikes(count: number) {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return "отметка «Нравится»";
-  return "отметок «Нравится»";
-}
+/** Порог, после которого подпись сворачивается за «… ещё», как в Instagram. */
+const CAPTION_PREVIEW_LENGTH = 125;
 
 export function PostCard({ post }: { post: Post }) {
   const currentUserId = useAuthStore((state) => state.user?.id);
   const isOwnPost = currentUserId === post.userId;
   const deletePost = useDeletePost();
+  const [isCaptionExpanded, setIsCaptionExpanded] = useState(false);
 
   const handleDelete = () => {
     deletePost.mutate(post.postId, {
@@ -41,64 +39,91 @@ export function PostCard({ post }: { post: Post }) {
     });
   };
 
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(`${window.location.origin}/post/${post.postId}`);
+    toast.success("Ссылка скопирована");
+  };
+
+  const caption = post.content ?? "";
+  const isCaptionLong = caption.length > CAPTION_PREVIEW_LENGTH;
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="border-b pb-4"
+      className="mb-5 border-b pb-5"
     >
-      <header className="flex items-center justify-between px-3 py-2">
-        <Link href={`/profile/${post.userId}`} className="flex items-center gap-2">
+      <header className="flex items-center justify-between pb-3">
+        <Link href={`/profile/${post.userId}`} className="flex items-center gap-3">
           <Avatar className="size-8">
             <AvatarImage src={resolveImageUrl(post.userImage)} alt={post.userName ?? ""} />
             <AvatarFallback>{(post.userName ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
           </Avatar>
-          <span className="text-sm font-medium">{post.userName ?? "Пользователь"}</span>
+          <div className="flex flex-col">
+            <span className="text-sm leading-tight">
+              <span className="font-semibold">{post.userName ?? "Пользователь"}</span>
+              <span className="text-muted-foreground">
+                {" "}
+                • {formatTimeAgoShort(post.datePublished)}
+              </span>
+            </span>
+            {post.title && (
+              <span className="text-xs leading-tight text-muted-foreground">{post.title}</span>
+            )}
+          </div>
         </Link>
 
-        {isOwnPost && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="ghost" size="icon" className="size-8" aria-label="Меню поста" />}
-            >
-              <MoreHorizontal className="size-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem variant="destructive" onClick={handleDelete}>
-                Удалить
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" size="icon" className="size-8" aria-label="Меню поста" />}
+          >
+            <MoreHorizontal className="size-5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem render={<Link href={`/post/${post.postId}`} />}>
+              Перейти к публикации
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCopyLink}>Скопировать ссылку</DropdownMenuItem>
+            {isOwnPost && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={handleDelete}>
+                  Удалить
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
 
       <Link href={`/post/${post.postId}`}>
-        <PostMedia images={post.images} alt={post.title ?? "Пост"} />
+        <PostMedia images={post.images} alt={post.title ?? "Пост"} variant="feed" />
       </Link>
 
-      <PostActionsBar post={post} />
+      <PostActionsBar post={post} showCounts className="px-0 pt-3" />
 
-      <div className="space-y-1 px-3 pt-2 text-sm">
-        {post.postLikeCount > 0 && (
-          <p className="font-medium">
-            {post.postLikeCount} {pluralizeLikes(post.postLikeCount)}
-          </p>
-        )}
-        {post.content && (
-          <p>
-            <span className="font-medium">{post.userName}</span> {post.content}
-          </p>
-        )}
-        {post.commentCount > 0 && (
-          <Link href={`/post/${post.postId}`} className="block text-muted-foreground">
-            Показать все комментарии ({post.commentCount})
-          </Link>
-        )}
-        <p className="text-xs text-muted-foreground uppercase">
-          {formatDistanceToNow(new Date(post.datePublished), { addSuffix: true, locale: ru })}
+      {caption && (
+        <p className="pt-2 text-sm">
+          <Link href={`/profile/${post.userId}`} className="font-semibold">
+            {post.userName ?? "Пользователь"}
+          </Link>{" "}
+          {!isCaptionLong || isCaptionExpanded ? (
+            caption
+          ) : (
+            <>
+              {caption.slice(0, CAPTION_PREVIEW_LENGTH).trimEnd()}…{" "}
+              <button
+                type="button"
+                onClick={() => setIsCaptionExpanded(true)}
+                className="text-muted-foreground"
+              >
+                ещё
+              </button>
+            </>
+          )}
         </p>
-      </div>
+      )}
     </motion.article>
   );
 }

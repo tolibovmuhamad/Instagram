@@ -39,7 +39,7 @@ export function PostFeedList({
     return (
       <div className="space-y-6 py-4">
         {Array.from({ length: 3 }).map((_, index) => (
-          <Skeleton key={index} className="aspect-[4/5] w-full" />
+          <Skeleton key={index} className="aspect-square w-full rounded-[4px]" />
         ))}
       </div>
     );

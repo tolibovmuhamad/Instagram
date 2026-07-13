@@ -19,7 +19,7 @@ export function ProfileView({ userId }: { userId: string }) {
 
   if (isLoading) {
     return (
-      <div className="w-full space-y-6 p-6">
+      <div className="mx-auto w-full max-w-[935px] space-y-6 p-6">
         <div className="flex items-center gap-6">
           <Skeleton className="size-24 rounded-full" />
           <div className="flex-1 space-y-2">
@@ -36,7 +36,7 @@ export function ProfileView({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="w-full">
+    <div className="mx-auto w-full max-w-[935px]">
       <ProfileHeader
         userId={userId}
         profile={profile}
