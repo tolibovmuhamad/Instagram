@@ -1,5 +1,5 @@
-import { ChatListView } from "./ChatListView";
+import { MessagesEmptyState } from "./MessagesEmptyState";
 
 export default function MessagesPage() {
-  return <ChatListView />;
+  return <MessagesEmptyState />;
 }

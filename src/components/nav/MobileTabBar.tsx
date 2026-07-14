@@ -20,11 +20,11 @@ export function MobileTabBar() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t bg-background py-2 md:hidden">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter((item) => !item.desktopOnly).map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;
         return (
-          <Link key={item.href} href={item.href} aria-label={item.label} className="p-2">
+          <Link key={item.label} href={item.href} aria-label={item.label} className="p-2">
             <Icon className={cn("size-6", isActive && "text-foreground")} />
           </Link>
         );

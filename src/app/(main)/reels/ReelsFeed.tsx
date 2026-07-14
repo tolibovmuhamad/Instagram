@@ -1,19 +1,161 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import {
+  Bookmark,
+  ChevronDown,
+  ChevronUp,
+  Heart,
+  MessageCircle,
+  MoreHorizontal,
+  Send,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { useInView } from "react-intersection-observer";
+import { toast } from "sonner";
 
-import { PostActionsBar } from "@/components/post/PostActionsBar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFollowUser } from "@/features/follows/hooks";
+import { useLikePost, useToggleFavorite } from "@/features/posts/hooks";
 import { useReelsInfinite } from "@/features/reels/hooks";
 import type { Reel } from "@/features/reels/types";
+import { cn } from "@/lib/utils";
 import { resolveImageUrl } from "@/lib/utils/image";
+
+const numberFormat = new Intl.NumberFormat("ru-RU");
+const formatCount = (value: number) => numberFormat.format(value);
+
+// tone="dark" — тёмные иконки в светлых полях по бокам видео (десктопный веб-Reels).
+// tone="light" — белые иконки поверх видео (мобильный полноэкранный режим).
+type Tone = "dark" | "light";
+
+// Вертикальный рейл действий справа от видео: лайк, комментарии, поделиться,
+// сохранить, ещё и мини-обложка — как в вебе Instagram 2026.
+function ReelActions({ reel, tone }: { reel: Reel; tone: Tone }) {
+  const likePost = useLikePost();
+  const toggleFavorite = useToggleFavorite();
+
+  const handleShare = async () => {
+    await navigator.clipboard.writeText(`${window.location.origin}/post/${reel.postId}`);
+    toast.success("Ссылка скопирована");
+  };
+
+  return (
+    <div className={cn("flex flex-col items-center gap-4", tone === "light" ? "text-white" : "text-foreground")}>
+      <motion.button
+        type="button"
+        aria-label={reel.postLike ? "Убрать лайк" : "Поставить лайк"}
+        whileTap={{ scale: 1.25 }}
+        onClick={() => likePost.mutate(reel.postId)}
+        className="flex flex-col items-center gap-1"
+      >
+        <Heart
+          strokeWidth={1.8}
+          className={cn("size-6", reel.postLike && "fill-red-500 text-red-500")}
+        />
+        {reel.postLikeCount > 0 && (
+          <span className="text-xs font-semibold">{formatCount(reel.postLikeCount)}</span>
+        )}
+      </motion.button>
+
+      <Link
+        href={`/post/${reel.postId}`}
+        aria-label="Комментарии"
+        className="flex flex-col items-center gap-1"
+      >
+        <MessageCircle strokeWidth={1.8} className="size-6 -scale-x-100" />
+        {reel.commentCount > 0 && (
+          <span className="text-xs font-semibold">{formatCount(reel.commentCount)}</span>
+        )}
+      </Link>
+
+      <button type="button" aria-label="Поделиться" onClick={handleShare}>
+        <Send strokeWidth={1.8} className="size-6" />
+      </button>
+
+      <button
+        type="button"
+        aria-label={reel.postFavorite ? "Убрать из сохранённого" : "Сохранить"}
+        onClick={() => toggleFavorite.mutate(reel.postId)}
+      >
+        <Bookmark strokeWidth={1.8} className={cn("size-6", reel.postFavorite && "fill-current")} />
+      </button>
+
+      <button type="button" aria-label="Ещё" onClick={handleShare}>
+        <MoreHorizontal strokeWidth={1.8} className="size-6" />
+      </button>
+
+      <Link
+        href={`/profile/${reel.userId}`}
+        aria-label="Автор Reels"
+        className={cn(
+          "mt-1 size-7 overflow-hidden rounded-lg ring-1",
+          tone === "light" ? "ring-white/30" : "ring-border",
+        )}
+      >
+        {resolveImageUrl(reel.userImage) ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={resolveImageUrl(reel.userImage)}
+            alt=""
+            className="size-full object-cover"
+          />
+        ) : (
+          <span className="block size-full bg-gradient-to-br from-fuchsia-500 to-amber-400" />
+        )}
+      </Link>
+    </div>
+  );
+}
+
+// Автор + кнопка «Подписаться» (синяя, как в оригинале) под видео слева.
+function ReelAuthor({ reel, tone }: { reel: Reel; tone: Tone }) {
+  const follow = useFollowUser(reel.userId);
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2",
+        tone === "light" ? "text-white" : "text-foreground",
+      )}
+    >
+      <Link href={`/profile/${reel.userId}`} className="flex items-center gap-2.5">
+        <Avatar className={cn("size-8 ring-1", tone === "light" ? "ring-white/40" : "ring-border")}>
+          <AvatarImage src={resolveImageUrl(reel.userImage)} alt={reel.userName ?? ""} />
+          <AvatarFallback className="text-xs">
+            {(reel.userName ?? "?").slice(0, 1).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <span className="text-sm font-semibold">{reel.userName ?? "Пользователь"}</span>
+      </Link>
+
+      {!reel.isSubscriber && (
+        <>
+          <span className={cn("text-sm", tone === "light" ? "text-white/70" : "text-muted-foreground")}>
+            •
+          </span>
+          <button
+            type="button"
+            onClick={() => follow.mutate()}
+            disabled={follow.isPending}
+            className="text-sm font-semibold text-[#0095f6] transition-opacity hover:opacity-70 disabled:opacity-50"
+          >
+            Подписаться
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 function ReelItem({ reel }: { reel: Reel }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { ref: inViewRef, inView } = useInView({ threshold: 0.6 });
+  const [muted, setMuted] = useState(true);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -25,44 +167,66 @@ function ReelItem({ reel }: { reel: Reel }) {
     }
   }, [inView]);
 
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setMuted(video.muted);
+  };
+
   const videoUrl = resolveImageUrl(reel.images);
 
   return (
-    <div
+    <section
       ref={inViewRef}
-      className="relative flex h-dvh w-full snap-start items-center justify-center bg-black"
+      className="relative flex h-dvh w-full snap-start items-center justify-center md:py-4"
     >
-      {videoUrl && (
-        <video
-          ref={videoRef}
-          src={videoUrl}
-          className="h-full w-full object-contain"
-          loop
-          muted
-          playsInline
-        />
-      )}
+      {/* Карточка видео 9:16: на десктопе — по центру со скруглением, на мобильном — на весь экран.
+          Фон и скругление на самом <video>, чтобы углы были чистыми, а рейл/автор снаружи не обрезались. */}
+      <div className="relative h-full w-screen md:aspect-[9/16] md:h-full md:w-auto">
+        {videoUrl && (
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            className="size-full bg-black object-cover md:rounded-md"
+            loop
+            muted
+            playsInline
+          />
+        )}
 
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 bg-gradient-to-t from-black/70 to-transparent p-4">
-        <div className="max-w-[75%] space-y-2 text-white">
-          <Link href={`/profile/${reel.userId}`} className="flex items-center gap-2">
-            <Avatar className="size-8">
-              <AvatarImage src={resolveImageUrl(reel.userImage)} alt={reel.userName ?? ""} />
-              <AvatarFallback>{(reel.userName ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium">{reel.userName ?? "Пользователь"}</span>
-          </Link>
-          {reel.content && <p className="text-sm">{reel.content}</p>}
+        <button
+          type="button"
+          aria-label={muted ? "Включить звук" : "Выключить звук"}
+          onClick={toggleMute}
+          className="absolute bottom-3 right-3 grid size-8 place-items-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
+        >
+          {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+        </button>
+
+        {/* Мобильные оверлеи поверх видео. */}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 md:hidden">
+          <ReelAuthor reel={reel} tone="light" />
+        </div>
+        <div className="absolute bottom-20 right-2 md:hidden">
+          <ReelActions reel={reel} tone="light" />
         </div>
 
-        <PostActionsBar post={reel} variant="vertical" />
+        {/* Десктоп: автор слева от видео, рейл действий справа — оба вне карточки. */}
+        <div className="absolute bottom-2 right-full mr-6 hidden w-max md:block">
+          <ReelAuthor reel={reel} tone="dark" />
+        </div>
+        <div className="absolute bottom-0 left-full ml-4 hidden md:block">
+          <ReelActions reel={reel} tone="dark" />
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
 export function ReelsFeed() {
   const reelsQuery = useReelsInfinite();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { ref: sentinelRef, inView } = useInView();
 
   const reels = reelsQuery.data?.pages.flatMap((page) => page.items) ?? [];
@@ -74,10 +238,16 @@ export function ReelsFeed() {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const scrollByViewport = (direction: 1 | -1) => {
+    const container = scrollRef.current;
+    if (!container) return;
+    container.scrollBy({ top: direction * container.clientHeight, behavior: "smooth" });
+  };
+
   if (reelsQuery.isPending) {
     return (
       <div className="flex h-dvh items-center justify-center">
-        <Skeleton className="h-full w-full max-w-md" />
+        <Skeleton className="h-[min(88vh,900px)] w-auto max-w-full rounded-md md:aspect-[9/16]" />
       </div>
     );
   }
@@ -99,11 +269,36 @@ export function ReelsFeed() {
   }
 
   return (
-    <div className="h-dvh w-full snap-y snap-mandatory overflow-y-scroll">
-      {reels.map((reel) => (
-        <ReelItem key={reel.postId} reel={reel} />
-      ))}
-      <div ref={sentinelRef} className="h-px" />
-    </div>
+    <>
+      <div
+        ref={scrollRef}
+        className="h-dvh w-full snap-y snap-mandatory overflow-y-scroll [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {reels.map((reel) => (
+          <ReelItem key={reel.postId} reel={reel} />
+        ))}
+        <div ref={sentinelRef} className="h-px" />
+      </div>
+
+      {/* Круглые стрелки навигации у правого края, как в вебе Instagram. */}
+      <div className="fixed right-5 top-1/2 z-30 hidden -translate-y-1/2 flex-col gap-3 md:flex">
+        <button
+          type="button"
+          aria-label="Предыдущий Reels"
+          onClick={() => scrollByViewport(-1)}
+          className="grid size-11 place-items-center rounded-full border bg-background text-foreground shadow-sm transition-colors hover:bg-accent"
+        >
+          <ChevronUp className="size-5" />
+        </button>
+        <button
+          type="button"
+          aria-label="Следующий Reels"
+          onClick={() => scrollByViewport(1)}
+          className="grid size-11 place-items-center rounded-full border bg-background text-foreground shadow-sm transition-colors hover:bg-accent"
+        >
+          <ChevronDown className="size-5" />
+        </button>
+      </div>
+    </>
   );
 }

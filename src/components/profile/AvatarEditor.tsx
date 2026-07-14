@@ -8,14 +8,18 @@ import { Button } from "@/components/ui/button";
 import { useDeleteAvatar } from "@/features/users/hooks";
 import { resolveImageUrl } from "@/lib/utils/image";
 
+import { cn } from "@/lib/utils";
+
 import { AvatarUploadDialog } from "./AvatarUploadDialog";
 
 interface AvatarEditorProps {
   image: string | null;
   fallback: string;
+  /** Размер аватара (Tailwind size-*). По умолчанию size-24. */
+  className?: string;
 }
 
-export function AvatarEditor({ image, fallback }: AvatarEditorProps) {
+export function AvatarEditor({ image, fallback, className }: AvatarEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pickedImageSrc, setPickedImageSrc] = useState<string | null>(null);
   const deleteAvatar = useDeleteAvatar();
@@ -35,13 +39,13 @@ export function AvatarEditor({ image, fallback }: AvatarEditorProps) {
   };
 
   return (
-    <div className="relative">
-      <Avatar className="size-24">
+    <div className="group/avatar relative">
+      <Avatar className={cn("size-24", className)}>
         <AvatarImage src={resolveImageUrl(image)} alt={fallback} />
         <AvatarFallback className="text-2xl">{fallback.slice(0, 1).toUpperCase()}</AvatarFallback>
       </Avatar>
 
-      <div className="absolute -right-1 -bottom-1 flex gap-1">
+      <div className="absolute -right-1 -bottom-1 flex gap-1 opacity-0 transition-opacity group-hover/avatar:opacity-100">
         <Button
           type="button"
           size="icon"
