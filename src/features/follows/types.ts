@@ -1,11 +1,4 @@
-export interface FollowUserShortInfo {
-  userId: string;
-  userName: string;
-  userPhoto: string | null;
-  fullname: string;
-}
+import type { UserSearchResult } from "@/features/users/types";
 
-export interface FollowRelation {
-  id: number;
-  userShortInfo: FollowUserShortInfo;
-}
+// Списки подписчиков/подписок отдают ту же краткую карточку пользователя, что и поиск.
+export type FollowUser = UserSearchResult;

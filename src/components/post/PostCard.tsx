@@ -18,7 +18,7 @@ import {
 import { useDeletePost } from "@/features/posts/hooks";
 import type { Post } from "@/features/posts/types";
 import { formatTimeAgoShort } from "@/lib/utils/date";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 
 import { PostActionsBar } from "./PostActionsBar";
@@ -34,13 +34,13 @@ export function PostCard({ post }: { post: Post }) {
   const [isCaptionExpanded, setIsCaptionExpanded] = useState(false);
 
   const handleDelete = () => {
-    deletePost.mutate(post.postId, {
+    deletePost.mutate(post.id, {
       onSuccess: () => toast.success("Пост удалён"),
     });
   };
 
   const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(`${window.location.origin}/post/${post.postId}`);
+    await navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
     toast.success("Ссылка скопирована");
   };
 
@@ -57,7 +57,7 @@ export function PostCard({ post }: { post: Post }) {
       <header className="flex items-center justify-between pb-3">
         <Link href={`/profile/${post.userId}`} className="flex items-center gap-3">
           <Avatar className="size-8">
-            <AvatarImage src={resolveImageUrl(post.userImage)} alt={post.userName ?? ""} />
+            <AvatarImage src={resolveAvatarUrl(post.userImage)} alt={post.userName ?? ""} />
             <AvatarFallback>{(post.userName ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
@@ -65,7 +65,7 @@ export function PostCard({ post }: { post: Post }) {
               <span className="font-semibold">{post.userName ?? "Пользователь"}</span>
               <span className="text-muted-foreground">
                 {" "}
-                • {formatTimeAgoShort(post.datePublished)}
+                • {formatTimeAgoShort(post.createdAt)}
               </span>
             </span>
             {post.title && (
@@ -81,7 +81,7 @@ export function PostCard({ post }: { post: Post }) {
             <MoreHorizontal className="size-5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem render={<Link href={`/post/${post.postId}`} />}>
+            <DropdownMenuItem render={<Link href={`/post/${post.id}`} />}>
               Перейти к публикации
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleCopyLink}>Скопировать ссылку</DropdownMenuItem>
@@ -97,7 +97,7 @@ export function PostCard({ post }: { post: Post }) {
         </DropdownMenu>
       </header>
 
-      <Link href={`/post/${post.postId}`}>
+      <Link href={`/post/${post.id}`}>
         <PostMedia images={post.images} alt={post.title ?? "Пост"} variant="feed" />
       </Link>
 

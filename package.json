@@ -9,7 +9,7 @@
     "lint": "eslint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "gen:api": "openapi-typescript https://instagram-api.softclub.tj/swagger/v1/swagger.json -o src/lib/api/schema.d.ts",
+    "gen:api": "openapi-typescript https://instagram-backend-ea2y.onrender.com/swagger/v1/swagger.json -o src/lib/api/schema.d.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"

@@ -15,7 +15,7 @@ export function CommentForm({ postId }: { postId: number }) {
   });
 
   const onSubmit = (values: AddCommentFormValues) => {
-    addComment.mutate(values.comment, { onSuccess: () => reset() });
+    addComment.mutate({ comment: values.comment }, { onSuccess: () => reset() });
   };
 
   return (

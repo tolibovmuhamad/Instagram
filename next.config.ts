@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "instagram-api.softclub.tj",
+        hostname: "instagram-backend-ea2y.onrender.com",
         pathname: "/images/**",
       },
     ],

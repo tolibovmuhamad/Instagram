@@ -60,7 +60,7 @@ export function PostFeedList({
   return (
     <div>
       {posts.map((post) => (
-        <PostCard key={post.postId} post={post} />
+        <PostCard key={post.id} post={post} />
       ))}
       {hasNextPage && <div ref={ref} className="h-px" />}
     </div>

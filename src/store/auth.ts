@@ -33,7 +33,9 @@ export const useAuthStore = create<AuthState>()(
         const claims = decodeJwt(accessToken);
         set({
           accessToken,
-          user: claims ? { id: claims.sid, userName: claims.name, email: claims.email } : null,
+          user: claims
+            ? { id: claims.userId, userName: claims.userName, email: claims.email }
+            : null,
         });
       },
       logout: () => set({ accessToken: null, user: null }),
@@ -41,6 +43,12 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
+      // Токены старого бэкенда (другой ключ подписи и другие claim'ы) новым не принимаются,
+      // а сохранённый рядом user собран из claim'ов sid/name, которых больше нет. Поднятая
+      // версия выбрасывает такую сессию при гидратации, вместо того чтобы ловить 401 на
+      // первом же запросе и показывать пользователю «пустой» аккаунт без id.
+      version: 2,
+      migrate: () => ({ accessToken: null, user: null }),
       partialize: (state) => ({ accessToken: state.accessToken, user: state.user }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

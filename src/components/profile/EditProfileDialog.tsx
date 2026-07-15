@@ -27,7 +27,7 @@ import {
   updateProfileSchema,
   type UpdateProfileFormValues,
 } from "@/features/users/schemas";
-import type { UserProfile } from "@/features/users/types";
+import { GENDER_FROM_CODE, type UserProfile } from "@/features/users/types";
 
 interface EditProfileDialogProps {
   open: boolean;
@@ -45,7 +45,10 @@ export function EditProfileDialog({ open, onOpenChange, profile }: EditProfileDi
     formState: { errors },
   } = useForm<UpdateProfileFormValues>({
     resolver: zodResolver(updateProfileSchema),
-    values: { about: profile.about, gender: profile.gender },
+    values: {
+      about: profile.about ?? "",
+      gender: GENDER_FROM_CODE[profile.gender],
+    },
   });
 
   const onSubmit = (values: UpdateProfileFormValues) => {

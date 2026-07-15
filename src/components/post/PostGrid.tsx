@@ -66,7 +66,7 @@ export function PostGrid({
     <div>
       <div className="grid grid-cols-3 gap-1">
         {posts.map((post) => (
-          <PostGridItem key={post.postId} post={post} />
+          <PostGridItem key={post.id} post={post} />
         ))}
       </div>
       {hasNextPage && <div ref={ref} className="h-px" />}

@@ -5,9 +5,7 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  // Показывать только в десктопном рейле. «Интересное» и «Уведомления» пока ведут
-  // на /explore (отдельной ленты Explore и бэкенда уведомлений ещё нет) — в узкий
-  // мобильный таб-бар их не выносим, чтобы не дублировать разделы.
+  /** Только десктопный рейл — в узкий мобильный таб-бар такие пункты не выносим. */
   desktopOnly?: boolean;
 }
 
@@ -18,8 +16,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Главная", icon: Home },
   { href: "/reels", label: "Reels", icon: SquarePlay },
   { href: "/messages", label: "Сообщения", icon: Send },
-  { href: "/explore", label: "Поиск", icon: Search },
+  { href: "/search", label: "Поиск", icon: Search },
   { href: "/explore", label: "Интересное", icon: Compass, desktopOnly: true },
-  { href: "/explore", label: "Уведомления", icon: Heart, desktopOnly: true },
+  // TODO: экрана уведомлений ещё нет, хотя модуль /Notification у бэкенда есть.
+  { href: "/notifications", label: "Уведомления", icon: Heart, desktopOnly: true },
   { href: "/create", label: "Создать", icon: Plus },
 ];

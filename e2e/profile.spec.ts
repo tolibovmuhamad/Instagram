@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const USER = { userName: "claude_dev_probe2", password: "Test12345!" };
-const OTHER_USER_ID = "1b2f216e-eb71-4f8f-94bc-27947bfceba7"; // claude_dev_probe3
+const OTHER_USER_ID = "a7456ea4-433a-4558-9c5d-f27e4f7e06c9"; // claude_dev_probe3
 const OTHER_USERNAME = "claude_dev_probe3";
 
 test.beforeEach(async ({ page }) => {

@@ -18,23 +18,23 @@ function buildToken(payload: Record<string, unknown>) {
 describe("decodeJwt", () => {
   it("decodes claims from a well-formed token", () => {
     const token = buildToken({
-      sid: "user-123",
-      name: "claude_dev_probe2",
+      userId: "user-123",
+      userName: "claude_dev_probe2",
       email: "probe2@example.com",
       exp: 9999999999,
-      iss: "instagram-group",
-      aud: "instagram-api",
+      iss: "InstagramClone",
+      aud: "InstagramCloneUsers",
     });
 
     const claims = decodeJwt(token);
-    expect(claims?.sid).toBe("user-123");
-    expect(claims?.name).toBe("claude_dev_probe2");
+    expect(claims?.userId).toBe("user-123");
+    expect(claims?.userName).toBe("claude_dev_probe2");
   });
 
   it("decodes non-ASCII (Cyrillic) claim values correctly", () => {
-    const token = buildToken({ name: "Пользователь", exp: 9999999999 });
+    const token = buildToken({ userName: "Пользователь", exp: 9999999999 });
     const claims = decodeJwt(token);
-    expect(claims?.name).toBe("Пользователь");
+    expect(claims?.userName).toBe("Пользователь");
   });
 
   it("returns null for a malformed token instead of throwing", () => {

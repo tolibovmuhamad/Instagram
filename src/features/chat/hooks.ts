@@ -4,9 +4,12 @@ import {
   createChat,
   deleteChat,
   deleteMessage,
+  forwardMessage,
   getChatById,
   getChats,
+  reactToMessage,
   sendMessage,
+  sendVoiceMessage,
 } from "./api";
 
 export const chatKeys = {
@@ -27,7 +30,8 @@ export function useChats() {
   });
 }
 
-export function useChatMessages(chatId: number) {
+// Отдаёт чат целиком: собеседника и его сообщения.
+export function useChat(chatId: number) {
   return useQuery({
     queryKey: chatKeys.messages(chatId),
     queryFn: () => getChatById(chatId),
@@ -52,6 +56,38 @@ export function useSendMessage(chatId: number) {
     mutationFn: sendMessage,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: chatKeys.messages(chatId) });
+      queryClient.invalidateQueries({ queryKey: chatKeys.list });
+    },
+  });
+}
+
+export function useSendVoiceMessage(chatId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: sendVoiceMessage,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: chatKeys.messages(chatId) });
+      queryClient.invalidateQueries({ queryKey: chatKeys.list });
+    },
+  });
+}
+
+export function useReactToMessage(chatId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: reactToMessage,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: chatKeys.messages(chatId) });
+    },
+  });
+}
+
+export function useForwardMessage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: forwardMessage,
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: chatKeys.messages(variables.targetChatId) });
       queryClient.invalidateQueries({ queryKey: chatKeys.list });
     },
   });

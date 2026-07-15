@@ -16,6 +16,6 @@ export function useReelsInfinite() {
     queryFn: ({ pageParam }) => getReels({ pageNumber: pageParam, pageSize: REELS_PAGE_SIZE }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
-      lastPage.pageNumber < lastPage.totalPage ? lastPage.pageNumber + 1 : undefined,
+      lastPage.pageNumber < lastPage.totalPages ? lastPage.pageNumber + 1 : undefined,
   });
 }

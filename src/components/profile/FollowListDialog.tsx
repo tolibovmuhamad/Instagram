@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSubscribers, useSubscriptions } from "@/features/follows/hooks";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl } from "@/lib/utils/image";
 
 interface FollowListDialogProps {
   userId: string;
@@ -49,22 +49,17 @@ export function FollowListDialog({ userId, mode, open, onOpenChange }: FollowLis
           {items.map((item) => (
             <Link
               key={item.id}
-              href={`/profile/${item.userShortInfo.userId}`}
+              href={`/profile/${item.id}`}
               onClick={() => onOpenChange(false)}
               className="flex items-center gap-3"
             >
               <Avatar className="size-10">
-                <AvatarImage
-                  src={resolveImageUrl(item.userShortInfo.userPhoto)}
-                  alt={item.userShortInfo.userName}
-                />
-                <AvatarFallback>
-                  {item.userShortInfo.userName.slice(0, 1).toUpperCase()}
-                </AvatarFallback>
+                <AvatarImage src={resolveAvatarUrl(item.avatar)} alt={item.userName} />
+                <AvatarFallback>{item.userName.slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-sm font-medium">{item.userShortInfo.userName}</p>
-                <p className="text-xs text-muted-foreground">{item.userShortInfo.fullname}</p>
+                <p className="text-sm font-medium">{item.userName}</p>
+                <p className="text-xs text-muted-foreground">{item.fullName}</p>
               </div>
             </Link>
           ))}

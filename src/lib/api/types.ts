@@ -4,16 +4,16 @@ export interface ApiEnvelope<T> {
   statusCode: number;
   pageNumber?: number;
   pageSize?: number;
-  totalPage?: number;
-  totalRecord?: number;
+  totalPages?: number;
+  totalRecords?: number;
 }
 
 export interface Paginated<T> {
   items: T[];
   pageNumber: number;
   pageSize: number;
-  totalPage: number;
-  totalRecord: number;
+  totalPages: number;
+  totalRecords: number;
 }
 
 export class ApiError extends Error {

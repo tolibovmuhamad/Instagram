@@ -2,7 +2,7 @@
 
 import { Plus, Settings } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,10 +13,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useMyStories } from "@/features/stories/hooks";
+import type { StoryGroup } from "@/features/stories/types";
 import type { UserProfile } from "@/features/users/types";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl, resolveImageUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
+import { useHighlightsStore } from "@/store/highlights";
 
+import { HighlightPickerDialog } from "@/components/story/HighlightPickerDialog";
+import { StoryViewer } from "@/components/story/StoryViewer";
 import { AvatarEditor } from "./AvatarEditor";
 import { EditProfileDialog } from "./EditProfileDialog";
 import { FollowButton } from "./FollowButton";
@@ -26,10 +31,13 @@ interface ProfileHeaderProps {
   userId: string;
   profile: UserProfile;
   isOwnProfile: boolean;
-  isSubscriber?: boolean;
 }
 
 const numberFormat = new Intl.NumberFormat("ru-RU");
+
+// Стабильная ссылка на «нет highlights» — чтобы селектор стора не давал новый массив
+// на каждый рендер и не гонял лишние ререндеры.
+const EMPTY_IDS: number[] = [];
 
 // Серая «пилюля»-кнопка Instagram (#efefef): «Редактировать профиль» и т.п.
 const grayButtonClass =
@@ -41,13 +49,56 @@ const settingsPlaceholderItems = ["QR-код", "Уведомления"];
 const settingsPlaceholderItems2 = ["Meta Verified", "Родительский контроль", "Входы в аккаунт"];
 const settingsMenuItemClass = "cursor-pointer rounded-none px-4 py-3.5 text-[15px]";
 
-export function ProfileHeader({ userId, profile, isOwnProfile, isSubscriber }: ProfileHeaderProps) {
+export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderProps) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [followListMode, setFollowListMode] = useState<"subscribers" | "subscriptions" | null>(
     null,
   );
+  const [isHighlightViewerOpen, setIsHighlightViewerOpen] = useState(false);
+  const [isArchiveViewerOpen, setIsArchiveViewerOpen] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const logout = useAuthStore((state) => state.logout);
-  const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(" ");
+  const displayName = profile.fullName;
+
+  // Архив = все мои истории (get-my-stories); в бэкенде они не исчезают. Highlights держим
+  // локально как ссылки на id из архива (см. useHighlightsStore) — только для своего профиля,
+  // т.к. чужие highlights серверу неизвестны.
+  const myStoriesQuery = useMyStories();
+  const archive = useMemo(
+    () => [...(myStoriesQuery.data ?? [])].sort((a, b) => a.createAt.localeCompare(b.createAt)),
+    [myStoriesQuery.data],
+  );
+  const highlightIds = useHighlightsStore((state) => state.byUser[userId]) ?? EMPTY_IDS;
+  const addHighlights = useHighlightsStore((state) => state.addHighlights);
+  const removeHighlight = useHighlightsStore((state) => state.removeHighlight);
+
+  // Только валидные ссылки: если история удалена из архива, из «Актуального» она тоже пропадает.
+  const highlightStories = useMemo(
+    () => archive.filter((story) => highlightIds.includes(story.id)),
+    [archive, highlightIds],
+  );
+
+  const buildGroup = (stories: typeof archive): StoryGroup | undefined =>
+    stories.length === 0
+      ? undefined
+      : {
+          userId,
+          userName: profile.userName,
+          userImage: profile.image,
+          isVerified: profile.isVerified,
+          stories,
+        };
+
+  const highlightGroup = buildGroup(highlightStories);
+  const archiveGroup = buildGroup(archive);
+  const highlightCover = highlightStories.length
+    ? resolveImageUrl(highlightStories[highlightStories.length - 1].fileName)
+    : undefined;
+
+  const handleOpenArchive = () => {
+    if (archiveGroup) setIsArchiveViewerOpen(true);
+    else toast("В архиве пока нет историй");
+  };
 
   return (
     <header className="border-b px-4 pb-6 pt-4 md:pb-8 md:pt-8">
@@ -71,7 +122,7 @@ export function ProfileHeader({ userId, profile, isOwnProfile, isSubscriber }: P
               />
             ) : (
               <Avatar className="size-20 md:size-[150px]">
-                <AvatarImage src={resolveImageUrl(profile.image)} alt={profile.userName} />
+                <AvatarImage src={resolveAvatarUrl(profile.image)} alt={profile.userName} />
                 <AvatarFallback className="text-4xl">
                   {profile.userName.slice(0, 1).toUpperCase()}
                 </AvatarFallback>
@@ -139,10 +190,9 @@ export function ProfileHeader({ userId, profile, isOwnProfile, isSubscriber }: P
               )}
             </div>
 
-            {(displayName || profile.about || profile.occupation) && (
+            {(displayName || profile.about) && (
               <div className="space-y-0.5 text-sm">
                 {displayName && <p className="font-semibold">{displayName}</p>}
-                {profile.occupation && <p className="text-muted-foreground">{profile.occupation}</p>}
                 {profile.about && <p className="whitespace-pre-line">{profile.about}</p>}
               </div>
             )}
@@ -154,13 +204,13 @@ export function ProfileHeader({ userId, profile, isOwnProfile, isSubscriber }: P
               </span>
               <button type="button" onClick={() => setFollowListMode("subscribers")}>
                 <strong className="font-semibold">
-                  {numberFormat.format(profile.subscribersCount)}
+                  {numberFormat.format(profile.followersCount)}
                 </strong>{" "}
                 подписчиков
               </button>
               <button type="button" onClick={() => setFollowListMode("subscriptions")}>
                 <strong className="font-semibold">
-                  {numberFormat.format(profile.subscriptionsCount)}
+                  {numberFormat.format(profile.followingCount)}
                 </strong>{" "}
                 подписок
               </button>
@@ -175,29 +225,45 @@ export function ProfileHeader({ userId, profile, isOwnProfile, isSubscriber }: P
               <button type="button" className={grayButtonClass} onClick={() => setIsEditOpen(true)}>
                 Редактировать профиль
               </button>
-              <button
-                type="button"
-                className={grayButtonClass}
-                onClick={() => toast("Раздел «Архив» пока недоступен")}
-              >
+              <button type="button" className={grayButtonClass} onClick={handleOpenArchive}>
                 Посмотреть архив
               </button>
             </>
           ) : (
-            isSubscriber !== undefined && (
-              <div className="flex-1">
-                <FollowButton targetUserId={userId} isSubscriber={isSubscriber} />
-              </div>
-            )
+            <div className="flex-1">
+              <FollowButton
+                targetUserId={userId}
+                isFollowing={profile.isFollowing}
+                isRequested={profile.isRequested}
+                isPrivate={profile.isPrivate}
+              />
+            </div>
           )}
         </div>
 
-        {/* Актуальное (highlights): для своего профиля показываем кружок «Добавить». */}
+        {/* Актуальное (highlights): ссылки на истории из архива. Управляем только своим —
+            чужие highlights серверу неизвестны (модуля highlights в API нет). */}
         {isOwnProfile && (
           <div className="mt-8 flex gap-5">
+            {highlightGroup && (
+              <button
+                type="button"
+                onClick={() => setIsHighlightViewerOpen(true)}
+                className="flex flex-col items-center gap-1.5"
+              >
+                <span className="grid size-[72px] place-items-center overflow-hidden rounded-full border border-border md:size-[84px]">
+                  <Avatar className="size-[64px] md:size-[76px]">
+                    <AvatarImage src={highlightCover} alt="Актуальное" className="object-cover" />
+                    <AvatarFallback>{profile.userName.slice(0, 1).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </span>
+                <span className="text-xs font-medium">Актуальное</span>
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={() => toast("«Актуальное» пока недоступно")}
+              onClick={() => setIsPickerOpen(true)}
               className="flex flex-col items-center gap-1.5"
             >
               <span className="grid size-[72px] place-items-center rounded-full border border-border text-muted-foreground md:size-[84px]">
@@ -208,6 +274,37 @@ export function ProfileHeader({ userId, profile, isOwnProfile, isSubscriber }: P
           </div>
         )}
       </div>
+
+      {/* Вьюер «Актуального»: удаление УБИРАЕТ ссылку (история в архиве остаётся). */}
+      {isHighlightViewerOpen && highlightGroup && (
+        <StoryViewer
+          groups={[highlightGroup]}
+          initialGroupIndex={0}
+          onClose={() => setIsHighlightViewerOpen(false)}
+          onStoryViewed={() => {}}
+          onRemoveStory={(storyId) => removeHighlight(userId, storyId)}
+          removeLabel="Убрать из «Актуального»"
+        />
+      )}
+
+      {/* Вьюер архива: здесь удаление настоящее (DeleteStory). */}
+      {isArchiveViewerOpen && archiveGroup && (
+        <StoryViewer
+          groups={[archiveGroup]}
+          initialGroupIndex={0}
+          onClose={() => setIsArchiveViewerOpen(false)}
+          onStoryViewed={() => {}}
+        />
+      )}
+
+      {isOwnProfile && (
+        <HighlightPickerDialog
+          open={isPickerOpen}
+          onOpenChange={setIsPickerOpen}
+          existingIds={highlightIds}
+          onConfirm={(storyIds) => addHighlights(userId, storyIds)}
+        />
+      )}
 
       {isOwnProfile && (
         <EditProfileDialog open={isEditOpen} onOpenChange={setIsEditOpen} profile={profile} />

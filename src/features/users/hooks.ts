@@ -8,9 +8,9 @@ import {
   deleteUserImageProfile,
   deleteUserSearchHistories,
   deleteUserSearchHistory,
-  getIsFollowUserProfileById,
   getMyProfile,
   getPostFavorites,
+  getUserProfileById,
   getSearchHistories,
   getUserSearchHistories,
   searchUsers,
@@ -31,7 +31,7 @@ export function useMyProfile() {
 export function useUserProfile(id: string) {
   return useQuery({
     queryKey: userKeys.profile(id),
-    queryFn: () => getIsFollowUserProfileById(id),
+    queryFn: () => getUserProfileById(id),
     enabled: !!id,
   });
 }
@@ -75,7 +75,7 @@ export function useFavoritePostsInfinite(enabled = true) {
       getPostFavorites({ pageNumber: pageParam, pageSize: FAVORITES_PAGE_SIZE }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
-      lastPage.pageNumber < lastPage.totalPage ? lastPage.pageNumber + 1 : undefined,
+      lastPage.pageNumber < lastPage.totalPages ? lastPage.pageNumber + 1 : undefined,
     enabled,
   });
 }
@@ -87,6 +87,18 @@ export function useSearchUsers(query: string) {
     queryKey: ["users", "search", query],
     queryFn: () => searchUsers({ userName: query, pageNumber: 1, pageSize: SEARCH_PAGE_SIZE }),
     enabled: query.trim().length > 0,
+  });
+}
+
+// Эндпоинта «кого читать» на бэкенде нет, поэтому рекомендации собираем сами: берём пул
+// пользователей и уже на клиенте выкидываем себя и тех, на кого подписаны (см. SuggestedUsers).
+const SUGGESTIONS_POOL_SIZE = 30;
+
+export function useSuggestedUsersPool() {
+  return useQuery({
+    queryKey: ["users", "suggestionsPool"],
+    queryFn: () => searchUsers({ pageNumber: 1, pageSize: SUGGESTIONS_POOL_SIZE }),
+    staleTime: 5 * 60 * 1000,
   });
 }
 

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMyProfile } from "@/features/users/hooks";
 import { cn } from "@/lib/utils";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 
 import { NAV_ITEMS } from "./nav-items";
@@ -32,7 +32,7 @@ export function MobileTabBar() {
       <Link href={profileHref} aria-label="Профиль" className="p-2">
         <Avatar className={cn("size-6", isProfileActive && "ring-2 ring-foreground")}>
           <AvatarImage
-            src={resolveImageUrl(profileQuery.data?.image)}
+            src={resolveAvatarUrl(profileQuery.data?.image)}
             alt={user?.userName ?? ""}
           />
           <AvatarFallback className="text-[10px]">

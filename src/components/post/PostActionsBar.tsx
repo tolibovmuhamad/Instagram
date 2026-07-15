@@ -9,12 +9,12 @@ import { useLikePost, useToggleFavorite } from "@/features/posts/hooks";
 import { cn } from "@/lib/utils";
 
 // Узкий структурный тип вместо полного Post — так же подходит для Reel (это тот же
-// пост под капотом, просто отфильтрованный по видео), не заставляя реели притворяться Post.
+// пост под капотом, просто с флагом isReel), не заставляя реели притворяться Post.
 interface LikeableFavoritablePost {
-  postId: number;
-  postLike: boolean;
-  postLikeCount: number;
-  postFavorite: boolean;
+  id: number;
+  isLiked: boolean;
+  likeCount: number;
+  isFavorite: boolean;
   commentCount: number;
 }
 
@@ -37,7 +37,7 @@ export function PostActionsBar({
   const toggleFavorite = useToggleFavorite();
 
   const handleShare = async () => {
-    await navigator.clipboard.writeText(`${window.location.origin}/post/${post.postId}`);
+    await navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
     toast.success("Ссылка скопирована");
   };
 
@@ -46,15 +46,15 @@ export function PostActionsBar({
       <div className="flex flex-col items-center gap-5 text-white">
         <motion.button
           type="button"
-          aria-label={post.postLike ? "Убрать лайк" : "Поставить лайк"}
+          aria-label={post.isLiked ? "Убрать лайк" : "Поставить лайк"}
           whileTap={{ scale: 1.3 }}
-          onClick={() => likePost.mutate(post.postId)}
+          onClick={() => likePost.mutate(post.id)}
           className="flex flex-col items-center gap-1"
         >
-          <Heart className={cn("size-7", post.postLike && "fill-red-500 text-red-500")} />
-          <span className="text-xs">{post.postLikeCount}</span>
+          <Heart className={cn("size-7", post.isLiked && "fill-red-500 text-red-500")} />
+          <span className="text-xs">{post.likeCount}</span>
         </motion.button>
-        <Link href={`/post/${post.postId}`} aria-label="Комментарии" className="flex flex-col items-center gap-1">
+        <Link href={`/post/${post.id}`} aria-label="Комментарии" className="flex flex-col items-center gap-1">
           <MessageCircle className="size-7" />
           <span className="text-xs">{post.commentCount}</span>
         </Link>
@@ -63,10 +63,10 @@ export function PostActionsBar({
         </button>
         <button
           type="button"
-          aria-label={post.postFavorite ? "Убрать из сохранённого" : "Сохранить"}
-          onClick={() => toggleFavorite.mutate(post.postId)}
+          aria-label={post.isFavorite ? "Убрать из сохранённого" : "Сохранить"}
+          onClick={() => toggleFavorite.mutate(post.id)}
         >
-          <Bookmark className={cn("size-7", post.postFavorite && "fill-current")} />
+          <Bookmark className={cn("size-7", post.isFavorite && "fill-current")} />
         </button>
       </div>
     );
@@ -78,21 +78,21 @@ export function PostActionsBar({
         <div className="flex items-center gap-1.5">
           <motion.button
             type="button"
-            aria-label={post.postLike ? "Убрать лайк" : "Поставить лайк"}
+            aria-label={post.isLiked ? "Убрать лайк" : "Поставить лайк"}
             whileTap={{ scale: 1.3 }}
-            onClick={() => likePost.mutate(post.postId)}
+            onClick={() => likePost.mutate(post.id)}
             className="transition-opacity hover:opacity-60"
           >
-            <Heart className={cn("size-6", post.postLike && "fill-red-500 text-red-500")} />
+            <Heart className={cn("size-6", post.isLiked && "fill-red-500 text-red-500")} />
           </motion.button>
-          {showCounts && post.postLikeCount > 0 && (
-            <span className="text-sm font-semibold">{post.postLikeCount}</span>
+          {showCounts && post.likeCount > 0 && (
+            <span className="text-sm font-semibold">{post.likeCount}</span>
           )}
         </div>
 
         <div className="flex items-center gap-1.5">
           <Link
-            href={`/post/${post.postId}`}
+            href={`/post/${post.id}`}
             aria-label="Комментарии"
             className="transition-opacity hover:opacity-60"
           >
@@ -114,11 +114,11 @@ export function PostActionsBar({
       </div>
       <button
         type="button"
-        aria-label={post.postFavorite ? "Убрать из сохранённого" : "Сохранить"}
-        onClick={() => toggleFavorite.mutate(post.postId)}
+        aria-label={post.isFavorite ? "Убрать из сохранённого" : "Сохранить"}
+        onClick={() => toggleFavorite.mutate(post.id)}
         className="transition-opacity hover:opacity-60"
       >
-        <Bookmark className={cn("size-6", post.postFavorite && "fill-current")} />
+        <Bookmark className={cn("size-6", post.isFavorite && "fill-current")} />
       </button>
     </div>
   );

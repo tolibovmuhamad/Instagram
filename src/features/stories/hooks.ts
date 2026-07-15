@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { QueryClient } from "@tanstack/react-query";
 
 import {
   addStory,
@@ -9,8 +8,9 @@ import {
   getStories,
   getUserStories,
   likeStory,
+  replyToStory,
 } from "./api";
-import type { StoryGroup } from "./types";
+import { groupStoriesByUser } from "./types";
 
 export const storyKeys = {
   rail: ["stories", "rail"] as const,
@@ -19,7 +19,11 @@ export const storyKeys = {
 };
 
 export function useStories() {
-  return useQuery({ queryKey: storyKeys.rail, queryFn: getStories });
+  return useQuery({
+    queryKey: storyKeys.rail,
+    queryFn: getStories,
+    select: groupStoriesByUser,
+  });
 }
 
 export function useMyStories() {
@@ -54,40 +58,27 @@ export function useDeleteStory() {
   });
 }
 
-function patchStoryInCache(
-  queryClient: QueryClient,
-  storyId: number,
-  updater: (story: StoryGroup["stories"][number]) => Partial<StoryGroup["stories"][number]>,
-) {
-  const patchGroup = (group: StoryGroup): StoryGroup => ({
-    ...group,
-    stories: group.stories.map((story) =>
-      story.id === storyId ? { ...story, ...updater(story) } : story,
-    ),
-  });
-
-  queryClient.setQueriesData<StoryGroup[] | StoryGroup>(
-    { predicate: (query) => query.queryKey[0] === "stories" },
-    (data) => {
-      if (!data) return data;
-      return Array.isArray(data) ? data.map(patchGroup) : patchGroup(data);
-    },
-  );
-}
-
+// В DTO сторис нет флага «текущий пользователь уже лайкнул» — только счётчик лайков
+// (viewerDto.viewLike). Поэтому оптимистично подсветить сердечко по данным с сервера
+// невозможно: состояние кнопки вьюер держит у себя, а сюда мы лишь перезапрашиваем
+// счётчик после ответа.
 export function useLikeStory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: likeStory,
-    onMutate: async (storyId) => {
-      patchStoryInCache(queryClient, storyId, (story) => ({
-        liked: !story.liked,
-        likedCount: story.liked ? story.likedCount - 1 : story.likedCount + 1,
-      }));
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stories"] });
     },
   });
 }
 
 export function useViewStory() {
   return useMutation({ mutationFn: addStoryView });
+}
+
+export function useReplyToStory() {
+  return useMutation({
+    mutationFn: ({ storyId, text }: { storyId: number; text: string }) =>
+      replyToStory(storyId, text),
+  });
 }

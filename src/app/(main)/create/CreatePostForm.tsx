@@ -146,14 +146,15 @@ export function CreatePostForm() {
         }),
       );
 
-      const newPostId = await addPost.mutateAsync({
+      // add-post возвращает созданный пост целиком, а не только его id.
+      const newPost = await addPost.mutateAsync({
         title: values.title,
         content: values.content,
         images: preparedImages,
       });
 
       toast.success("Пост опубликован");
-      router.push(`/post/${newPostId}`);
+      router.push(`/post/${newPost.id}`);
     } catch {
       // ошибка уже показана через axios-интерцептор (toast)
     } finally {

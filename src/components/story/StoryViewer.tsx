@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useDeleteStory, useLikeStory, useViewStory } from "@/features/stories/hooks";
 import type { StoryGroup } from "@/features/stories/types";
 import { cn } from "@/lib/utils";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl, resolveImageUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 
 const STORY_DURATION_MS = 5000;
@@ -23,6 +23,10 @@ interface StoryViewerProps {
   initialGroupIndex: number;
   onClose: () => void;
   onStoryViewed: (storyId: number) => void;
+  // Если задан — кнопка удаления НЕ вызывает DeleteStory, а отдаёт id наружу
+  // (для «Актуального»: убираем ссылку, история в архиве остаётся).
+  onRemoveStory?: (storyId: number) => void;
+  removeLabel?: string;
 }
 
 export function StoryViewer({
@@ -30,11 +34,17 @@ export function StoryViewer({
   initialGroupIndex,
   onClose,
   onStoryViewed,
+  onRemoveStory,
+  removeLabel,
 }: StoryViewerProps) {
   const currentUserId = useAuthStore((state) => state.user?.id);
   const [groupIndex, setGroupIndex] = useState(initialGroupIndex);
   const [storyIndex, setStoryIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  // В DTO сторис нет флага «я уже лайкнул» — только счётчик лайков. Поэтому закрашенное
+  // сердечко показываем лишь по лайкам, поставленным в текущем сеансе просмотра; сам лайк
+  // при этом честно уходит на сервер.
+  const [likedInSession, setLikedInSession] = useState<Record<number, boolean>>({});
   const touchStartX = useRef<number | null>(null);
 
   const likeStory = useLikeStory();
@@ -110,6 +120,13 @@ export function StoryViewer({
   };
 
   const handleDelete = () => {
+    // Режим «Актуального»: убираем ссылку локально, саму историю не трогаем.
+    if (onRemoveStory) {
+      onRemoveStory(story.id);
+      toast.success("Убрано из «Актуального»");
+      onClose();
+      return;
+    }
     deleteStory.mutate(story.id, {
       onSuccess: () => {
         toast.success("Сторис удалена");
@@ -150,7 +167,7 @@ export function StoryViewer({
         <header className="flex items-center justify-between px-3 pb-2">
           <div className="flex items-center gap-2">
             <Avatar className="size-8">
-              <AvatarImage src={resolveImageUrl(group.userImage)} alt={group.userName} />
+              <AvatarImage src={resolveAvatarUrl(group.userImage)} alt={group.userName} />
               <AvatarFallback>{group.userName.slice(0, 1).toUpperCase()}</AvatarFallback>
             </Avatar>
             <span className="text-sm font-medium text-white">{group.userName}</span>
@@ -159,10 +176,10 @@ export function StoryViewer({
             </span>
           </div>
           <div className="flex items-center gap-1">
-            {isOwnGroup && (
+            {(isOwnGroup || onRemoveStory) && (
               <button
                 type="button"
-                aria-label="Удалить сторис"
+                aria-label={onRemoveStory ? (removeLabel ?? "Убрать из «Актуального»") : "Удалить сторис"}
                 onClick={handleDelete}
                 className="p-1 text-white"
               >
@@ -205,11 +222,19 @@ export function StoryViewer({
         <footer className="flex items-center justify-end p-3">
           <motion.button
             type="button"
-            aria-label={story.liked ? "Убрать лайк" : "Поставить лайк"}
+            aria-label={likedInSession[story.id] ? "Убрать лайк" : "Поставить лайк"}
             whileTap={{ scale: 1.3 }}
-            onClick={() => likeStory.mutate(story.id)}
+            onClick={() => {
+              likeStory.mutate(story.id);
+              setLikedInSession((prev) => ({ ...prev, [story.id]: !prev[story.id] }));
+            }}
           >
-            <Heart className={cn("size-6 text-white", story.liked && "fill-red-500 text-red-500")} />
+            <Heart
+              className={cn(
+                "size-6 text-white",
+                likedInSession[story.id] && "fill-red-500 text-red-500",
+              )}
+            />
           </motion.button>
         </footer>
       </div>

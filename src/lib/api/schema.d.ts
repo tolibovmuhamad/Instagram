@@ -13,6 +13,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Регистрация: создаёт пользователя и пустой профиль, возвращает JWT. */
         post: {
             parameters: {
                 query?: never;
@@ -22,13 +23,13 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["Domain.Dtos.RegisterDto.RegisterDto"];
-                    "text/json": components["schemas"]["Domain.Dtos.RegisterDto.RegisterDto"];
-                    "application/*+json": components["schemas"]["Domain.Dtos.RegisterDto.RegisterDto"];
+                    "application/json": components["schemas"]["RegisterDto"];
+                    "text/json": components["schemas"]["RegisterDto"];
+                    "application/*+json": components["schemas"]["RegisterDto"];
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -52,6 +53,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Вход. Без 2FA — возвращает JWT в `data`. При включённой 2FA — вместо токена отдаёт
+         *     признак «нужен второй фактор» и временный `twoFactorToken` (§11).
+         */
         post: {
             parameters: {
                 query?: never;
@@ -61,13 +66,239 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["Domain.Dtos.LoginDto.LoginDto"];
-                    "text/json": components["schemas"]["Domain.Dtos.LoginDto.LoginDto"];
-                    "application/*+json": components["schemas"]["Domain.Dtos.LoginDto.LoginDto"];
+                    "application/json": components["schemas"]["LoginDto"];
+                    "text/json": components["schemas"]["LoginDto"];
+                    "application/*+json": components["schemas"]["LoginDto"];
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Account/login-2fa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Завершение входа со вторым фактором (TOTP/email/резервный код) → JWT (§11). Аноним. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["Login2FaDto"];
+                    "text/json": components["schemas"]["Login2FaDto"];
+                    "application/*+json": components["schemas"]["Login2FaDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Account/send-2fa-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Высылает email-код в рамках login-флоу (пользователь ещё не аутентифицирован — идентификация
+         *     по `twoFactorToken`). В учебных целях код возвращается в `data` (§11). Аноним.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["Send2FaEmailDto"];
+                    "text/json": components["schemas"]["Send2FaEmailDto"];
+                    "application/*+json": components["schemas"]["Send2FaEmailDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Account/enable-2fa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Включает 2FA для текущего пользователя: возвращает секрет/QR-URI и резервные коды.
+         *     Требует подтверждения через `confirm-2fa` первым валидным кодом (§11).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Account/confirm-2fa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Подтверждает включение 2FA первым валидным TOTP-кодом (§11). */
+        post: {
+            parameters: {
+                query?: {
+                    code?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Account/disable-2fa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Отключает 2FA по валидному TOTP или резервному коду (§11). */
+        post: {
+            parameters: {
+                query?: {
+                    code?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Account/regenerate-backup-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Перевыпускает пачку одноразовых резервных кодов текущего пользователя (§11). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -92,10 +323,14 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Генерирует токен сброса пароля по email (в учебных целях возвращается в ответе).
+         *     Аноним: пользователь, забывший пароль, не может быть аутентифицирован.
+         */
         delete: {
             parameters: {
-                query: {
-                    Email: string;
+                query?: {
+                    email?: string;
                 };
                 header?: never;
                 path?: never;
@@ -103,16 +338,12 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "text/plain": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                        "application/json": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                        "text/json": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                    };
+                    content?: never;
                 };
             };
         };
@@ -131,13 +362,14 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Сбрасывает пароль по ранее выданному токену. Аноним (см. ForgotPassword). */
         delete: {
             parameters: {
-                query: {
-                    Token: string;
-                    Email: string;
-                    Password: string;
-                    ConfirmPassword: string;
+                query?: {
+                    token?: string;
+                    email?: string;
+                    password?: string;
+                    confirmPassword?: string;
                 };
                 header?: never;
                 path?: never;
@@ -145,16 +377,12 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "text/plain": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                        "application/json": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                        "text/json": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                    };
+                    content?: never;
                 };
             };
         };
@@ -171,12 +399,13 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** Меняет пароль текущего пользователя (id берётся из claims). */
         put: {
             parameters: {
-                query: {
-                    OldPassword: string;
-                    Password: string;
-                    ConfirmPassword: string;
+                query?: {
+                    oldPassword?: string;
+                    password?: string;
+                    confirmPassword?: string;
                 };
                 header?: never;
                 path?: never;
@@ -184,19 +413,268 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "text/plain": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                        "application/json": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                        "text/json": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                    };
+                    content?: never;
                 };
             };
         };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Admin/verify-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Поставить пользователю верификацию (синюю галочку). */
+        post: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Admin/unverify-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Снять верификацию с пользователя. */
+        delete: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Admin/grant-admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Выдать пользователю роль Admin. */
+        post: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Admin/revoke-admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Снять с пользователя роль Admin. */
+        delete: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Block/block-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Заблокировать пользователя (+ взаимная отписка). */
+        post: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Block/unblock-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Снять блокировку с пользователя. */
+        delete: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Block/get-blocked-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Список заблокированных текущим пользователем (с пагинацией). */
+        get: {
+            parameters: {
+                query?: {
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -211,6 +689,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Чаты текущего юзера: собеседник + последнее сообщение + непрочитанные. */
         get: {
             parameters: {
                 query?: never;
@@ -220,7 +699,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -244,6 +723,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Чат со всей перепиской; входящие сообщения помечаются прочитанными. */
         get: {
             parameters: {
                 query?: {
@@ -255,7 +735,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -281,6 +761,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Создать чат с получателем или вернуть существующий. */
         post: {
             parameters: {
                 query?: {
@@ -292,7 +773,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -315,6 +796,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** Отправить сообщение (multipart/form-data: ChatId, MessageText, File) + рассылка через SignalR. */
         put: {
             parameters: {
                 query?: never;
@@ -326,15 +808,17 @@ export interface paths {
                 content: {
                     "multipart/form-data": {
                         /** Format: int32 */
-                        ChatId: number;
+                        ChatId?: number;
                         MessageText?: string;
                         /** Format: binary */
                         File?: string;
+                        /** Format: int32 */
+                        ReplyToMessageId?: number;
                     };
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -360,6 +844,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Удалить сообщение — только отправитель (параметр `massageId` — опечатка контракта). */
         delete: {
             parameters: {
                 query?: {
@@ -371,7 +856,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -395,6 +880,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Удалить чат со всеми сообщениями — только участник. */
         delete: {
             parameters: {
                 query?: {
@@ -406,7 +892,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -420,17 +906,20 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/FollowingRelationShip/get-subscribers": {
+    "/CloseFriend/add": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: {
+        get?: never;
+        put?: never;
+        /** Добавить пользователя в близкие друзья. */
+        post: {
             parameters: {
-                query: {
-                    UserId: string;
+                query?: {
+                    userId?: string;
                 };
                 header?: never;
                 path?: never;
@@ -438,7 +927,188 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/CloseFriend/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Убрать пользователя из близких друзей. */
+        delete: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/CloseFriend/get-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Список близких друзей текущего юзера (с пагинацией). */
+        get: {
+            parameters: {
+                query?: {
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Explore/get-feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Персональная лента рекомендаций (по интересам: хэштеги/авторы + популярность/свежесть). */
+        get: {
+            parameters: {
+                query?: {
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Explore/get-popular": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Популярное (cold start): чистая популярность за вычетом своих/скрытых постов. */
+        get: {
+            parameters: {
+                query?: {
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/FollowingRelationShip/get-subscribers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Подписчики пользователя (кто подписан на UserId). */
+        get: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -462,10 +1132,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Подписки пользователя (на кого подписан UserId). */
         get: {
             parameters: {
-                query: {
-                    UserId: string;
+                query?: {
+                    userId?: string;
                 };
                 header?: never;
                 path?: never;
@@ -473,7 +1144,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -499,6 +1170,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Текущий юзер подписывается на followingUserId. Запрет дубля и подписки на себя. */
         post: {
             parameters: {
                 query?: {
@@ -510,7 +1182,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -535,6 +1207,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Текущий юзер отписывается от followingUserId. */
         delete: {
             parameters: {
                 query?: {
@@ -546,7 +1219,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -560,22 +1233,19 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/Location/get-Locations": {
+    "/FollowingRelationShip/get-follow-requests": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** Входящие запросы на подписку (Pending) к текущему пользователю (приватный аккаунт). */
         get: {
             parameters: {
                 query?: {
-                    City?: string;
-                    State?: string;
-                    ZipCode?: string;
-                    Country?: string;
-                    PageNumber?: number;
-                    PageSize?: number;
+                    pageNumber?: number;
+                    pageSize?: number;
                 };
                 header?: never;
                 path?: never;
@@ -583,7 +1253,655 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/FollowingRelationShip/accept-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Принять запрос на подписку от requesterUserId (+ уведомление об одобрении). */
+        post: {
+            parameters: {
+                query?: {
+                    requesterUserId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/FollowingRelationShip/decline-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Отклонить запрос на подписку от requesterUserId. */
+        post: {
+            parameters: {
+                query?: {
+                    requesterUserId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/FollowingRelationShip/cancel-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Отменить свой исходящий запрос на подписку к followingUserId. */
+        delete: {
+            parameters: {
+                query?: {
+                    followingUserId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/GroupChat/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Создать группу: создатель — Admin, указанные пользователи — Member. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateGroupChatDto"];
+                    "text/json": components["schemas"]["CreateGroupChatDto"];
+                    "application/*+json": components["schemas"]["CreateGroupChatDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/GroupChat/get-my-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Группы текущего юзера: последнее сообщение + непрочитанные. */
+        get: {
+            parameters: {
+                query?: {
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/GroupChat/get-group-by-id": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Карточка группы: инфо + участники + сообщения; входящие помечаются прочитанными. */
+        get: {
+            parameters: {
+                query?: {
+                    groupId?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/GroupChat/add-member": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Добавить участника — только Admin. */
+        post: {
+            parameters: {
+                query?: {
+                    groupId?: number;
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/GroupChat/remove-member": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Удалить участника — только Admin. */
+        delete: {
+            parameters: {
+                query?: {
+                    groupId?: number;
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/GroupChat/promote-admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Назначить участника админом — только Admin. */
+        post: {
+            parameters: {
+                query?: {
+                    groupId?: number;
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/GroupChat/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Выйти из группы самому. */
+        post: {
+            parameters: {
+                query?: {
+                    groupId?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/GroupChat/update-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Обновить название/аватар группы (multipart/form-data: Name, Avatar) — только Admin. */
+        put: {
+            parameters: {
+                query?: {
+                    groupId?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": {
+                        Name?: string;
+                        /** Format: binary */
+                        Avatar?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/GroupChat/send-message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Отправить сообщение (multipart/form-data: MessageText, File, ReplyToMessageId) + рассылка через SignalR. */
+        put: {
+            parameters: {
+                query?: {
+                    groupId?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": {
+                        MessageText?: string;
+                        /** Format: binary */
+                        File?: string;
+                        /** Format: int32 */
+                        ReplyToMessageId?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/GroupChat/delete-message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Удалить сообщение — автор сообщения или админ группы. */
+        delete: {
+            parameters: {
+                query?: {
+                    messageId?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Hashtag/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Поиск/автодополнение тегов по префиксу, сортировка по популярности. */
+        get: {
+            parameters: {
+                query?: {
+                    query?: string;
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Hashtag/get-posts-by-tag": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Лента постов по хэштегу (свежие сверху), с учётом блокировок/приватности. */
+        get: {
+            parameters: {
+                query?: {
+                    tag?: string;
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Hashtag/get-trending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Популярные (трендовые) теги за последний период. */
+        get: {
+            parameters: {
+                query?: {
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Location/get-Locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Локации с фильтром по City/State/ZipCode/Country и пагинацией. */
+        get: {
+            parameters: {
+                query?: {
+                    city?: string;
+                    state?: string;
+                    zipCode?: string;
+                    country?: string;
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -607,6 +1925,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Локация по Id. */
         get: {
             parameters: {
                 query?: {
@@ -618,7 +1937,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -644,6 +1963,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Создать локацию (body `AddLocationDto`, все поля обязательны). */
         post: {
             parameters: {
                 query?: never;
@@ -653,13 +1973,13 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["Domain.Dtos.LocationDto.AddLocationDto"];
-                    "text/json": components["schemas"]["Domain.Dtos.LocationDto.AddLocationDto"];
-                    "application/*+json": components["schemas"]["Domain.Dtos.LocationDto.AddLocationDto"];
+                    "application/json": components["schemas"]["AddLocationDto"];
+                    "text/json": components["schemas"]["AddLocationDto"];
+                    "application/*+json": components["schemas"]["AddLocationDto"];
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -682,6 +2002,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** Обновить локацию (body `UpdateLocationDto` с `locationId`). */
         put: {
             parameters: {
                 query?: never;
@@ -691,13 +2012,13 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["Domain.Dtos.LocationDto.UpdateLocationDto"];
-                    "text/json": components["schemas"]["Domain.Dtos.LocationDto.UpdateLocationDto"];
-                    "application/*+json": components["schemas"]["Domain.Dtos.LocationDto.UpdateLocationDto"];
+                    "application/json": components["schemas"]["UpdateLocationDto"];
+                    "text/json": components["schemas"]["UpdateLocationDto"];
+                    "application/*+json": components["schemas"]["UpdateLocationDto"];
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -723,6 +2044,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Удалить локацию по Id. */
         delete: {
             parameters: {
                 query?: {
@@ -734,7 +2056,309 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Message/react": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Поставить/снять/заменить реакцию-эмодзи на сообщение (тумблер/замена) + real-time пуш. */
+        post: {
+            parameters: {
+                query?: {
+                    messageId?: number;
+                    context?: components["schemas"]["MessageContext"];
+                    emoji?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Message/forward": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Переслать сообщение (копия содержимого) в целевой чат/группу с пометкой «Переслано». */
+        post: {
+            parameters: {
+                query?: {
+                    messageId?: number;
+                    context?: components["schemas"]["MessageContext"];
+                    targetChatId?: number;
+                    targetContext?: components["schemas"]["MessageContext"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Message/send-voice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Отправить голосовое сообщение (multipart/form-data: Context, ChatId, File, Duration, ReplyToMessageId). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": {
+                        Context?: components["schemas"]["MessageContext"];
+                        /** Format: int32 */
+                        ChatId?: number;
+                        /** Format: binary */
+                        File?: string;
+                        /** Format: int32 */
+                        Duration?: number;
+                        /** Format: int32 */
+                        ReplyToMessageId?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Notification/get-notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Сгруппированная лента уведомлений с пагинацией. */
+        get: {
+            parameters: {
+                query?: {
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Notification/get-unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Число непрочитанных уведомлений (для «звоночка»). */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Notification/mark-as-read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Отметить одно уведомление прочитанным — только своё. */
+        put: {
+            parameters: {
+                query?: {
+                    id?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Notification/mark-all-as-read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Отметить все уведомления прочитанными. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Notification/delete-notification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Удалить одно уведомление — только своё. */
+        delete: {
+            parameters: {
+                query?: {
+                    id?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -755,14 +2379,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Лента с фильтром по автору/заголовку/тексту, счётчиками и флагами текущего юзера. */
         get: {
             parameters: {
                 query?: {
-                    UserId?: string;
-                    Title?: string;
-                    Content?: string;
-                    PageNumber?: number;
-                    PageSize?: number;
+                    userId?: string;
+                    title?: string;
+                    content?: string;
+                    pageNumber?: number;
+                    pageSize?: number;
                 };
                 header?: never;
                 path?: never;
@@ -770,7 +2395,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -794,11 +2419,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Только reels (IsReel = true) с пагинацией. */
         get: {
             parameters: {
                 query?: {
-                    PageNumber?: number;
-                    PageSize?: number;
+                    pageNumber?: number;
+                    pageSize?: number;
                 };
                 header?: never;
                 path?: never;
@@ -806,7 +2432,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -830,6 +2456,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Пост по id. */
         get: {
             parameters: {
                 query?: {
@@ -841,7 +2468,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -865,6 +2492,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Посты текущего пользователя. */
         get: {
             parameters: {
                 query?: never;
@@ -874,7 +2502,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -898,12 +2526,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Лента из постов тех, на кого подписан UserId (по умолчанию — текущий юзер). */
         get: {
             parameters: {
                 query?: {
-                    UserId?: string;
-                    PageNumber?: number;
-                    PageSize?: number;
+                    userId?: string;
+                    pageNumber?: number;
+                    pageSize?: number;
                 };
                 header?: never;
                 path?: never;
@@ -911,7 +2540,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -937,6 +2566,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Создание поста (multipart/form-data): Title, Content, Images (required). */
         post: {
             parameters: {
                 query?: never;
@@ -949,12 +2579,13 @@ export interface paths {
                     "multipart/form-data": {
                         Title?: string;
                         Content?: string;
-                        Images: string[];
+                        IsReel?: boolean;
+                        Images?: string[];
                     };
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -979,6 +2610,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Удаление поста — только автор. */
         delete: {
             parameters: {
                 query?: {
@@ -990,7 +2622,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1013,6 +2645,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Тумблер лайка поста. */
         post: {
             parameters: {
                 query?: {
@@ -1024,7 +2657,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1048,6 +2681,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Зафиксировать просмотр поста (уникально на юзера). */
         post: {
             parameters: {
                 query?: {
@@ -1059,7 +2693,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1083,6 +2717,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Добавить комментарий к посту или ответ на комментарий (необязательный parentCommentId). */
         post: {
             parameters: {
                 query?: never;
@@ -1092,13 +2727,13 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["Domain.Dtos.PostCommentDto.AddPostCommentDto"];
-                    "text/json": components["schemas"]["Domain.Dtos.PostCommentDto.AddPostCommentDto"];
-                    "application/*+json": components["schemas"]["Domain.Dtos.PostCommentDto.AddPostCommentDto"];
+                    "application/json": components["schemas"]["AddPostCommentDto"];
+                    "text/json": components["schemas"]["AddPostCommentDto"];
+                    "application/*+json": components["schemas"]["AddPostCommentDto"];
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1107,6 +2742,80 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Post/like-comment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Тумблер лайка комментария. */
+        post: {
+            parameters: {
+                query?: {
+                    commentId?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Post/get-comment-replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ответы под комментарием (2-й уровень) с пагинацией. */
+        get: {
+            parameters: {
+                query?: {
+                    commentId?: number;
+                    pageNumber?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1123,6 +2832,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Удалить комментарий — только автор комментария. */
         delete: {
             parameters: {
                 query?: {
@@ -1134,7 +2844,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1157,6 +2867,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Тумблер избранного для поста. */
         post: {
             parameters: {
                 query?: never;
@@ -1166,13 +2877,13 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["Domain.Dtos.PostFavoriteDto.AddPostFavoriteDto"];
-                    "text/json": components["schemas"]["Domain.Dtos.PostFavoriteDto.AddPostFavoriteDto"];
-                    "application/*+json": components["schemas"]["Domain.Dtos.PostFavoriteDto.AddPostFavoriteDto"];
+                    "application/json": components["schemas"]["AddPostFavoriteDto"];
+                    "text/json": components["schemas"]["AddPostFavoriteDto"];
+                    "application/*+json": components["schemas"]["AddPostFavoriteDto"];
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1187,13 +2898,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/Story/get-stories": {
+    "/Presence/get-status": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** Онлайн-статус одного пользователя (с учётом взаимной видимости). */
+        get: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Presence/get-statuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Онлайн-статусы набора пользователей одним запросом (для списка чатов/подписчиков). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["PresenceQueryDto"];
+                    "text/json": components["schemas"]["PresenceQueryDto"];
+                    "application/*+json": components["schemas"]["PresenceQueryDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Settings/get-privacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Текущие настройки приватности (создаются по умолчанию при первом обращении). */
         get: {
             parameters: {
                 query?: never;
@@ -1203,7 +2991,81 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Settings/update-privacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Обновить настройки приватности. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePrivacySettingsDto"];
+                    "text/json": components["schemas"]["UpdatePrivacySettingsDto"];
+                    "application/*+json": components["schemas"]["UpdatePrivacySettingsDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Story/get-stories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Активные сторис тех, на кого подписан текущий юзер, сгруппированные по авторам. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1227,6 +3089,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Активные сторис конкретного пользователя. */
         get: {
             parameters: {
                 query?: never;
@@ -1238,7 +3101,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1262,6 +3125,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Активные сторис текущего пользователя. */
         get: {
             parameters: {
                 query?: never;
@@ -1271,7 +3135,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1297,6 +3161,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Тумблер лайка сторис. */
         post: {
             parameters: {
                 query?: {
@@ -1308,16 +3173,12 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "text/plain": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                        "application/json": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                        "text/json": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                    };
+                    content?: never;
                 };
             };
         };
@@ -1334,6 +3195,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Сторис по id со сводкой по зрителям (viewerDto). */
         get: {
             parameters: {
                 query?: {
@@ -1345,16 +3207,12 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "text/plain": components["schemas"]["Domain.Responses.Response`1[Domain.Dtos.StoryDtos.GetStoryDto]"];
-                        "application/json": components["schemas"]["Domain.Responses.Response`1[Domain.Dtos.StoryDtos.GetStoryDto]"];
-                        "text/json": components["schemas"]["Domain.Responses.Response`1[Domain.Dtos.StoryDtos.GetStoryDto]"];
-                    };
+                    content?: never;
                 };
             };
         };
@@ -1375,10 +3233,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Создание сторис из поста (PostId) или из файла (multipart/form-data: Image). */
         post: {
             parameters: {
                 query?: {
-                    PostId?: number;
+                    postId?: number;
                 };
                 header?: never;
                 path?: never;
@@ -1389,20 +3248,17 @@ export interface paths {
                     "multipart/form-data": {
                         /** Format: binary */
                         Image?: string;
+                        Audience?: components["schemas"]["StoryAudience"];
                     };
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "text/plain": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                        "application/json": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                        "text/json": components["schemas"]["Domain.Responses.Response`1[System.String]"];
-                    };
+                    content?: never;
                 };
             };
         };
@@ -1422,6 +3278,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Удаление сторис — только автор. */
         delete: {
             parameters: {
                 query?: {
@@ -1433,16 +3290,12 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "text/plain": components["schemas"]["Domain.Responses.Response`1[System.Boolean]"];
-                        "application/json": components["schemas"]["Domain.Responses.Response`1[System.Boolean]"];
-                        "text/json": components["schemas"]["Domain.Responses.Response`1[System.Boolean]"];
-                    };
+                    content?: never;
                 };
             };
         };
@@ -1460,10 +3313,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Зафиксировать просмотр сторис (уникально на юзера). */
         post: {
             parameters: {
-                query: {
-                    StoryId: number;
+                query?: {
+                    storyId?: number;
                 };
                 header?: never;
                 path?: never;
@@ -1471,16 +3325,90 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content: {
-                        "text/plain": components["schemas"]["Domain.Responses.Response`1[Domain.Dtos.StoryViewDtos.GetStoryViewDto]"];
-                        "application/json": components["schemas"]["Domain.Responses.Response`1[Domain.Dtos.StoryViewDtos.GetStoryViewDto]"];
-                        "text/json": components["schemas"]["Domain.Responses.Response`1[Domain.Dtos.StoryViewDtos.GetStoryViewDto]"];
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Story/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ответ на активную чужую сторис (§9) — уходит в директ автора. Тело: `{ text }`. */
+        post: {
+            parameters: {
+                query?: {
+                    storyId?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["StoryReplyRequestDto"];
+                    "text/json": components["schemas"]["StoryReplyRequestDto"];
+                    "application/*+json": components["schemas"]["StoryReplyRequestDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
                     };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Story/share-post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Репост чужого публичного поста в свою сторис (§9). */
+        post: {
+            parameters: {
+                query?: {
+                    postId?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
             };
         };
@@ -1497,13 +3425,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Поиск пользователей по userName/email с пагинацией. */
         get: {
             parameters: {
                 query?: {
-                    UserName?: string;
-                    Email?: string;
-                    PageNumber?: number;
-                    PageSize?: number;
+                    userName?: string;
+                    email?: string;
+                    pageNumber?: number;
+                    pageSize?: number;
                 };
                 header?: never;
                 path?: never;
@@ -1511,7 +3440,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1537,10 +3466,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Добавить запись в историю текстового поиска текущего юзера. */
         post: {
             parameters: {
-                query: {
-                    Text: string;
+                query?: {
+                    text?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1548,7 +3478,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1570,6 +3500,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** История текстового поиска текущего юзера. */
         get: {
             parameters: {
                 query?: never;
@@ -1579,7 +3510,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1606,10 +3537,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Удалить одну запись истории поиска. */
         delete: {
             parameters: {
-                query: {
-                    id: number;
+                query?: {
+                    id?: number;
                 };
                 header?: never;
                 path?: never;
@@ -1617,7 +3549,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1641,6 +3573,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Очистить всю историю текстового поиска текущего юзера. */
         delete: {
             parameters: {
                 query?: never;
@@ -1650,7 +3583,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1673,10 +3606,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Записать «просмотрел профиль» в историю просмотренных профилей. */
         post: {
             parameters: {
-                query: {
-                    UserSearchId: string;
+                query?: {
+                    userSearchId?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1684,7 +3618,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1706,6 +3640,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** История просмотренных профилей текущего юзера. */
         get: {
             parameters: {
                 query?: never;
@@ -1715,7 +3650,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1742,10 +3677,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Удалить одну запись истории просмотренных профилей. */
         delete: {
             parameters: {
-                query: {
-                    id: number;
+                query?: {
+                    id?: number;
                 };
                 header?: never;
                 path?: never;
@@ -1753,7 +3689,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1777,6 +3713,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Очистить всю историю просмотренных профилей текущего юзера. */
         delete: {
             parameters: {
                 query?: never;
@@ -1786,7 +3723,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1810,6 +3747,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Удаление пользователя. Доступно только роли Admin. */
         delete: {
             parameters: {
                 query?: {
@@ -1821,7 +3759,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1842,6 +3780,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Профиль по id пользователя: счётчики постов/подписчиков/подписок + isFollowing. */
         get: {
             parameters: {
                 query?: {
@@ -1853,7 +3792,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1877,6 +3816,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Подписан ли текущий пользователь на указанный профиль. */
         get: {
             parameters: {
                 query?: {
@@ -1888,7 +3828,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1912,6 +3852,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Профиль текущего пользователя. */
         get: {
             parameters: {
                 query?: never;
@@ -1921,7 +3862,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1946,6 +3887,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** Обновление «о себе» и пола текущего пользователя. */
         put: {
             parameters: {
                 query?: never;
@@ -1955,13 +3897,13 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["Domain.Dtos.UserProfileDto.UpdateUserProfileDto"];
-                    "text/json": components["schemas"]["Domain.Dtos.UserProfileDto.UpdateUserProfileDto"];
-                    "application/*+json": components["schemas"]["Domain.Dtos.UserProfileDto.UpdateUserProfileDto"];
+                    "application/json": components["schemas"]["UpdateUserProfileDto"];
+                    "text/json": components["schemas"]["UpdateUserProfileDto"];
+                    "application/*+json": components["schemas"]["UpdateUserProfileDto"];
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1984,11 +3926,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Избранные посты текущего пользователя с пагинацией. */
         get: {
             parameters: {
                 query?: {
-                    PageNumber?: number;
-                    PageSize?: number;
+                    pageNumber?: number;
+                    pageSize?: number;
                 };
                 header?: never;
                 path?: never;
@@ -1996,7 +3939,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -2021,6 +3964,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** Загрузка/замена изображения профиля (multipart/form-data). */
         put: {
             parameters: {
                 query?: never;
@@ -2037,7 +3981,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -2063,6 +4007,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Удаление изображения профиля. */
         delete: {
             parameters: {
                 query?: never;
@@ -2072,7 +4017,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Success */
+                /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -2086,106 +4031,204 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/db": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        "Domain.Dtos.LocationDto.AddLocationDto": {
-            city: string;
-            state: string;
-            zipCode: string;
-            country: string;
+        AddLocationDto: {
+            city?: string | null;
+            state?: string | null;
+            zipCode?: string | null;
+            country?: string | null;
         };
-        "Domain.Dtos.LocationDto.UpdateLocationDto": {
+        AddPostCommentDto: {
+            comment?: string | null;
             /** Format: int32 */
-            locationId: number;
-            city: string;
-            state: string;
-            zipCode: string;
-            country: string;
-        };
-        "Domain.Dtos.LoginDto.LoginDto": {
-            userName: string;
-            password: string;
-        };
-        "Domain.Dtos.PostCommentDto.AddPostCommentDto": {
-            comment: string;
+            postId?: number;
             /** Format: int32 */
-            postId: number;
+            parentCommentId?: number | null;
         };
-        "Domain.Dtos.PostFavoriteDto.AddPostFavoriteDto": {
+        AddPostFavoriteDto: {
             /** Format: int32 */
-            postId: number;
+            postId?: number;
         };
-        "Domain.Dtos.RegisterDto.RegisterDto": {
-            userName: string;
-            fullName: string;
-            email: string;
-            /** Format: password */
-            password: string;
-            /** Format: password */
-            confirmPassword: string;
-        };
-        "Domain.Dtos.StoryDtos.GetStoryDto": {
-            /** Format: int32 */
-            id?: number;
-            fileName?: string | null;
-            /** Format: int32 */
-            postId?: number | null;
-            /** Format: date-time */
-            createAt?: string;
-            userId?: string | null;
-            userAvatar?: string | null;
-            viewerDto?: components["schemas"]["Domain.Dtos.ViewerDtos.ViewerDto"];
-        };
-        "Domain.Dtos.StoryViewDtos.GetStoryViewDto": {
-            /** Format: int32 */
-            id?: number;
-            viewUserId?: string | null;
-            /** Format: int32 */
-            storyId?: number;
-        };
-        "Domain.Dtos.UserProfileDto.UpdateUserProfileDto": {
-            about?: string | null;
-            gender?: components["schemas"]["Domain.Enums.Gender"];
-        };
-        "Domain.Dtos.ViewerDtos.ViewerDto": {
-            userName?: string | null;
+        CreateGroupChatDto: {
             name?: string | null;
-            /** Format: int32 */
-            viewCount?: number | null;
-            /** Format: int32 */
-            viewLike?: number | null;
+            memberUserIds?: string[] | null;
         };
         /**
          * Format: int32
          * @enum {integer}
          */
-        "Domain.Enums.Gender": 0 | 1;
-        "Domain.Responses.Response`1[Domain.Dtos.StoryDtos.GetStoryDto]": {
-            data?: components["schemas"]["Domain.Dtos.StoryDtos.GetStoryDto"];
-            errors?: string[] | null;
-            /** Format: int32 */
-            statusCode?: number;
+        Gender: 0 | 1;
+        Login2FaDto: {
+            twoFactorToken?: string | null;
+            code?: string | null;
+            method?: string | null;
         };
-        "Domain.Responses.Response`1[Domain.Dtos.StoryViewDtos.GetStoryViewDto]": {
-            data?: components["schemas"]["Domain.Dtos.StoryViewDtos.GetStoryViewDto"];
-            errors?: string[] | null;
-            /** Format: int32 */
-            statusCode?: number;
+        LoginDto: {
+            userName?: string | null;
+            password?: string | null;
         };
-        "Domain.Responses.Response`1[System.Boolean]": {
-            data?: boolean;
-            errors?: string[] | null;
-            /** Format: int32 */
-            statusCode?: number;
+        /**
+         * Format: int32
+         * @enum {integer}
+         */
+        MessageContext: 0 | 1;
+        PresenceQueryDto: {
+            userIds?: string[] | null;
         };
-        "Domain.Responses.Response`1[System.String]": {
-            data?: string | null;
-            errors?: string[] | null;
-            /** Format: int32 */
-            statusCode?: number;
+        RegisterDto: {
+            userName?: string | null;
+            fullName?: string | null;
+            email?: string | null;
+            password?: string | null;
+            confirmPassword?: string | null;
         };
+        Send2FaEmailDto: {
+            twoFactorToken?: string | null;
+        };
+        /**
+         * Format: int32
+         * @enum {integer}
+         */
+        StoryAudience: 0 | 1;
+        StoryReplyRequestDto: {
+            text?: string | null;
+        };
+        UpdateLocationDto: {
+            /** Format: int32 */
+            locationId?: number;
+            city?: string | null;
+            state?: string | null;
+            zipCode?: string | null;
+            country?: string | null;
+        };
+        UpdatePrivacySettingsDto: {
+            isPrivate?: boolean;
+            showOnlineStatus?: boolean;
+            whoCanMessage?: components["schemas"]["WhoCanMessage"];
+            whoCanMention?: components["schemas"]["WhoCanMention"];
+            whoCanReplyStory?: components["schemas"]["WhoCanReplyStory"];
+        };
+        UpdateUserProfileDto: {
+            about?: string | null;
+            gender?: components["schemas"]["Gender"];
+        };
+        /**
+         * Format: int32
+         * @enum {integer}
+         */
+        WhoCanMention: 0 | 1 | 2;
+        /**
+         * Format: int32
+         * @enum {integer}
+         */
+        WhoCanMessage: 0 | 1 | 2;
+        /**
+         * Format: int32
+         * @enum {integer}
+         */
+        WhoCanReplyStory: 0 | 1 | 2 | 3;
     };
     responses: never;
     parameters: never;

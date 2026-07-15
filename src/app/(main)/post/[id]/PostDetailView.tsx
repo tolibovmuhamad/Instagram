@@ -22,19 +22,30 @@ import {
   useDeletePost,
   useLikePost,
   usePost,
+  usePostComments,
   useToggleFavorite,
   useViewPost,
 } from "@/features/posts/hooks";
 import { cn } from "@/lib/utils";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 
 const COMMENT_EMOJIS = ["😀", "😂", "😍", "🥰", "🔥", "❤️", "👏", "🙏", "😎", "💯", "🎉", "😭"];
+
+function pluralizeLikes(count: number) {
+  const lastTwo = count % 100;
+  const last = count % 10;
+  if (lastTwo >= 11 && lastTwo <= 14) return "отметок «Нравится»";
+  if (last === 1) return "отметка «Нравится»";
+  if (last >= 2 && last <= 4) return "отметки «Нравится»";
+  return "отметок «Нравится»";
+}
 
 export function PostDetailView({ postId }: { postId: number }) {
   const router = useRouter();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const postQuery = usePost(postId);
+  const commentsQuery = usePostComments(postId);
   const viewPost = useViewPost();
   const deletePost = useDeletePost();
   const likePost = useLikePost();
@@ -45,6 +56,8 @@ export function PostDetailView({ postId }: { postId: number }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [commentText, setCommentText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
+  // На какой комментарий отвечаем: commentId — родитель ветки, userName — для @упоминания.
+  const [replyTo, setReplyTo] = useState<{ commentId: number; userName: string } | null>(null);
 
   useEffect(() => {
     registerView(postId);
@@ -62,16 +75,30 @@ export function PostDetailView({ postId }: { postId: number }) {
 
   const post = postQuery.data;
 
-  const handleReply = (userName: string) => {
+  const handleReply = (parentCommentId: number, userName: string) => {
+    setReplyTo({ commentId: parentCommentId, userName });
     if (userName) setCommentText((value) => `@${userName} ${value.replace(/^@\S+\s/, "")}`.trimStart());
     inputRef.current?.focus();
+  };
+
+  const cancelReply = () => {
+    setReplyTo(null);
+    setCommentText((value) => value.replace(/^@\S+\s?/, ""));
   };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     const value = commentText.trim();
     if (!value) return;
-    addComment.mutate(value, { onSuccess: () => setCommentText("") });
+    addComment.mutate(
+      { comment: value, parentCommentId: replyTo?.commentId },
+      {
+        onSuccess: () => {
+          setCommentText("");
+          setReplyTo(null);
+        },
+      },
+    );
   };
 
   const handleShare = async () => {
@@ -81,7 +108,7 @@ export function PostDetailView({ postId }: { postId: number }) {
 
   const handleDelete = () => {
     if (!post) return;
-    deletePost.mutate(post.postId, {
+    deletePost.mutate(post.id, {
       onSuccess: () => {
         toast.success("Пост удалён");
         router.push("/");
@@ -133,7 +160,7 @@ export function PostDetailView({ postId }: { postId: number }) {
             <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
               <Link href={`/profile/${post.userId}`} className="flex items-center gap-3">
                 <Avatar className="size-8">
-                  <AvatarImage src={resolveImageUrl(post.userImage)} alt={post.userName ?? ""} />
+                  <AvatarImage src={resolveAvatarUrl(post.userImage)} alt={post.userName ?? ""} />
                   <AvatarFallback>{(post.userName ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-semibold">{post.userName ?? "Пользователь"}</span>
@@ -161,7 +188,7 @@ export function PostDetailView({ postId }: { postId: number }) {
               {post.content && (
                 <div className="flex items-start gap-3">
                   <Avatar className="size-8 shrink-0">
-                    <AvatarImage src={resolveImageUrl(post.userImage)} alt={post.userName ?? ""} />
+                    <AvatarImage src={resolveAvatarUrl(post.userImage)} alt={post.userName ?? ""} />
                     <AvatarFallback>
                       {(post.userName ?? "?").slice(0, 1).toUpperCase()}
                     </AvatarFallback>
@@ -175,7 +202,13 @@ export function PostDetailView({ postId }: { postId: number }) {
                 </div>
               )}
 
-              <CommentList postId={post.postId} comments={post.comments} onReply={handleReply} />
+              <CommentList
+                postId={post.id}
+                comments={commentsQuery.data?.items}
+                isLoading={commentsQuery.isPending}
+                isUnavailable={commentsQuery.isSuccess && commentsQuery.data === null}
+                onReply={handleReply}
+              />
             </div>
 
             {/* Действия. */}
@@ -184,12 +217,12 @@ export function PostDetailView({ postId }: { postId: number }) {
                 <div className="flex items-center gap-4">
                   <button
                     type="button"
-                    aria-label={post.postLike ? "Убрать лайк" : "Поставить лайк"}
-                    onClick={() => likePost.mutate(post.postId)}
+                    aria-label={post.isLiked ? "Убрать лайк" : "Поставить лайк"}
+                    onClick={() => likePost.mutate(post.id)}
                     className="transition-transform active:scale-90"
                   >
                     <Heart
-                      className={cn("size-6", post.postLike && "fill-red-500 text-red-500")}
+                      className={cn("size-6", post.isLiked && "fill-red-500 text-red-500")}
                     />
                   </button>
                   <button
@@ -205,48 +238,51 @@ export function PostDetailView({ postId }: { postId: number }) {
                 </div>
                 <button
                   type="button"
-                  aria-label={post.postFavorite ? "Убрать из сохранённого" : "Сохранить"}
-                  onClick={() => toggleFavorite.mutate(post.postId)}
+                  aria-label={post.isFavorite ? "Убрать из сохранённого" : "Сохранить"}
+                  onClick={() => toggleFavorite.mutate(post.id)}
                 >
-                  <Bookmark className={cn("size-6", post.postFavorite && "fill-current")} />
+                  <Bookmark className={cn("size-6", post.isFavorite && "fill-current")} />
                 </button>
               </div>
 
-              {/* Лайки. */}
-              {post.postLikeCount > 0 && (
+              {/* Лайки. Поимённого списка лайкнувших бэкенд больше не отдаёт — только счётчик. */}
+              {post.likeCount > 0 && (
                 <p className="mt-2 text-sm">
-                  {post.userLikes && post.userLikes.length > 0 ? (
-                    <>
-                      Нравится{" "}
-                      <Link
-                        href={`/profile/${post.userLikes[0].userId}`}
-                        className="font-semibold"
-                      >
-                        {post.userLikes[0].userName}
-                      </Link>
-                      {post.postLikeCount > 1 && (
-                        <>
-                          {" "}и ещё <span className="font-semibold">{post.postLikeCount - 1}</span>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <span className="font-semibold">
-                      {post.postLikeCount} отметок «Нравится»
-                    </span>
-                  )}
+                  <span className="font-semibold">{post.likeCount}</span>{" "}
+                  {pluralizeLikes(post.likeCount)}
                 </p>
               )}
 
               <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-                {format(new Date(post.datePublished), "d MMMM", { locale: ru })}
+                {format(new Date(post.createdAt), "d MMMM", { locale: ru })}
               </p>
             </div>
+
+            {/* Индикатор ответа. */}
+            {replyTo && (
+              <div className="flex items-center justify-between border-t bg-muted/40 px-4 py-1.5 text-xs text-muted-foreground">
+                <span>
+                  Ответ пользователю{" "}
+                  <span className="font-semibold">{replyTo.userName || "Пользователь"}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={cancelReply}
+                  aria-label="Отменить ответ"
+                  className="transition-colors hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            )}
 
             {/* Поле ввода. */}
             <form
               onSubmit={handleSubmit}
-              className="relative flex items-center gap-2 border-t px-4 py-2.5"
+              className={cn(
+                "relative flex items-center gap-2 border-t px-4 py-2.5",
+                replyTo && "border-t-0",
+              )}
             >
               <button
                 type="button"

@@ -12,22 +12,17 @@ import type { ChatSummary } from "@/features/chat/types";
 import { getNoteBackground } from "@/features/notes/data";
 import { useMyProfile } from "@/features/users/hooks";
 import { cn } from "@/lib/utils";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 import { useNotesStore } from "@/store/notes";
 
 import { NewChatDialog } from "./NewChatDialog";
 import { NoteComposer } from "./NoteComposer";
 
-function getOtherParticipant(chat: ChatSummary, currentUserId: string | undefined) {
-  if (chat.sendUserId === currentUserId) {
-    return {
-      userId: chat.receiveUserId,
-      userName: chat.receiveUserName,
-      userImage: chat.receiveUserImage,
-    };
-  }
-  return { userId: chat.sendUserId, userName: chat.sendUserName, userImage: chat.sendUserImage };
+// Бэкенд сам подставляет в чат собеседника (не «отправителя/получателя»),
+// поэтому вычислять вторую сторону на клиенте больше не нужно.
+function getOtherParticipant(chat: ChatSummary) {
+  return { userId: chat.userId, userName: chat.userName, userImage: chat.userImage };
 }
 
 export function ChatListView() {
@@ -48,22 +43,22 @@ export function ChatListView() {
     const seen = new Set<string>();
     const list: { userId: string; userName: string; userImage: string | null }[] = [];
     for (const chat of chats) {
-      const other = getOtherParticipant(chat, currentUserId);
+      const other = getOtherParticipant(chat);
       if (other.userId && !seen.has(other.userId)) {
         seen.add(other.userId);
         list.push(other);
       }
     }
     return list;
-  }, [chats, currentUserId]);
+  }, [chats]);
 
   const filteredChats = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return chats;
     return chats.filter((chat) =>
-      getOtherParticipant(chat, currentUserId).userName.toLowerCase().includes(term),
+      getOtherParticipant(chat).userName.toLowerCase().includes(term),
     );
-  }, [chats, currentUserId, search]);
+  }, [chats, search]);
 
   return (
     <div className="flex h-full flex-col">
@@ -121,7 +116,7 @@ export function ChatListView() {
               </span>
             )}
             <Avatar className="size-14">
-              <AvatarImage src={resolveImageUrl(myProfile.data?.image)} alt={userName} />
+              <AvatarImage src={resolveAvatarUrl(myProfile.data?.image)} alt={userName} />
               <AvatarFallback>{userName.slice(0, 1).toUpperCase()}</AvatarFallback>
             </Avatar>
           </div>
@@ -135,7 +130,7 @@ export function ChatListView() {
             className="flex w-16 shrink-0 flex-col items-center gap-1.5"
           >
             <Avatar className="size-14">
-              <AvatarImage src={resolveImageUrl(user.userImage)} alt={user.userName} />
+              <AvatarImage src={resolveAvatarUrl(user.userImage)} alt={user.userName} />
               <AvatarFallback>{user.userName.slice(0, 1).toUpperCase()}</AvatarFallback>
             </Avatar>
             <span className="max-w-full truncate text-xs">{user.userName}</span>
@@ -172,27 +167,49 @@ export function ChatListView() {
         )}
 
         {filteredChats.map((chat) => {
-          const other = getOtherParticipant(chat, currentUserId);
-          const isActive = pathname === `/messages/${chat.chatId}`;
+          const other = getOtherParticipant(chat);
+          const isActive = pathname === `/messages/${chat.id}`;
           return (
             <div
-              key={chat.chatId}
+              key={chat.id}
               className={cn(
                 "group flex items-center gap-3 px-6 py-2 transition-colors hover:bg-muted",
                 isActive && "bg-muted",
               )}
             >
-              <Link href={`/messages/${chat.chatId}`} className="flex min-w-0 flex-1 items-center gap-3">
+              <Link href={`/messages/${chat.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                 <Avatar className="size-14">
-                  <AvatarImage src={resolveImageUrl(other.userImage)} alt={other.userName} />
+                  <AvatarImage src={resolveAvatarUrl(other.userImage)} alt={other.userName} />
                   <AvatarFallback>{other.userName.slice(0, 1).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <span className="truncate text-sm font-medium">{other.userName}</span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium">{other.userName}</span>
+                  {chat.lastMessage && (
+                    <span
+                      className={cn(
+                        "truncate text-xs",
+                        chat.unreadCount > 0
+                          ? "font-semibold text-foreground"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {chat.lastMessage}
+                    </span>
+                  )}
+                </span>
+                {chat.unreadCount > 0 && (
+                  <span
+                    aria-label={`Непрочитанных сообщений: ${chat.unreadCount}`}
+                    className="grid size-5 shrink-0 place-items-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground"
+                  >
+                    {chat.unreadCount}
+                  </span>
+                )}
               </Link>
               <button
                 type="button"
                 aria-label="Удалить чат"
-                onClick={() => deleteChat.mutate(chat.chatId)}
+                onClick={() => deleteChat.mutate(chat.id)}
                 className="grid size-8 shrink-0 place-items-center rounded-full opacity-0 transition-opacity hover:bg-background group-hover:opacity-100"
               >
                 <Trash2 className="size-4" />

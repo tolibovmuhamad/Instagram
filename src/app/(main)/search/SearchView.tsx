@@ -19,11 +19,11 @@ import {
   useSearchUsers,
   useUserSearchHistories,
 } from "@/features/users/hooks";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl } from "@/lib/utils/image";
 
 const DEBOUNCE_MS = 400;
 
-export function ExploreSearch() {
+export function SearchView() {
   const [inputValue, setInputValue] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
@@ -92,7 +92,7 @@ export function ExploreSearch() {
               className="flex items-center gap-3 rounded-md p-2 hover:bg-muted"
             >
               <Avatar className="size-10">
-                <AvatarImage src={resolveImageUrl(user.avatar)} alt={user.userName} />
+                <AvatarImage src={resolveAvatarUrl(user.avatar)} alt={user.userName} />
                 <AvatarFallback>{user.userName.slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div>
@@ -129,7 +129,7 @@ export function ExploreSearch() {
                     >
                       <Avatar className="size-10">
                         <AvatarImage
-                          src={resolveImageUrl(entry.users.avatar)}
+                          src={resolveAvatarUrl(entry.users.avatar)}
                           alt={entry.users.userName}
                         />
                         <AvatarFallback>

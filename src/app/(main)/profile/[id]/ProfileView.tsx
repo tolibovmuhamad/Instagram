@@ -37,12 +37,7 @@ export function ProfileView({ userId }: { userId: string }) {
 
   return (
     <div className="mx-auto w-full max-w-[935px]">
-      <ProfileHeader
-        userId={userId}
-        profile={profile}
-        isOwnProfile={isOwnProfile}
-        isSubscriber={isOwnProfile ? undefined : otherProfileQuery.data?.isSubscriber}
-      />
+      <ProfileHeader userId={userId} profile={profile} isOwnProfile={isOwnProfile} />
       <ProfileTabs userId={userId} isOwnProfile={isOwnProfile} />
     </div>
   );

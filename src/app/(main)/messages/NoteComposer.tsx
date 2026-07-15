@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getNoteBackground, MUSIC_TRACKS, NOTE_BACKGROUNDS } from "@/features/notes/data";
 import { useMyProfile } from "@/features/users/hooks";
 import { cn } from "@/lib/utils";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 import { useNotesStore, type NoteMusic } from "@/store/notes";
 
@@ -130,7 +130,7 @@ export function NoteComposer({ onClose }: { onClose: () => void }) {
           </div>
 
           <Avatar className="size-32 ring-4 ring-background">
-            <AvatarImage src={resolveImageUrl(profile.data?.image)} alt={userName} />
+            <AvatarImage src={resolveAvatarUrl(profile.data?.image)} alt={userName} />
             <AvatarFallback className="text-3xl">
               {userName.slice(0, 1).toUpperCase()}
             </AvatarFallback>

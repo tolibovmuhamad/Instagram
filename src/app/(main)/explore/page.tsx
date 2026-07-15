@@ -1,5 +1,5 @@
-import { ExploreSearch } from "./ExploreSearch";
+import { ExploreGrid } from "./ExploreGrid";
 
 export default function ExplorePage() {
-  return <ExploreSearch />;
+  return <ExploreGrid />;
 }

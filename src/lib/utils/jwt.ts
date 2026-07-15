@@ -1,7 +1,9 @@
 export interface JwtClaims {
-  sid: string;
-  name: string;
+  userId: string;
+  userName: string;
   email: string;
+  jti: string;
+  nbf: number;
   exp: number;
   iss: string;
   aud: string;

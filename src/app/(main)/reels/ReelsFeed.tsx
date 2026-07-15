@@ -23,8 +23,9 @@ import { useFollowUser } from "@/features/follows/hooks";
 import { useLikePost, useToggleFavorite } from "@/features/posts/hooks";
 import { useReelsInfinite } from "@/features/reels/hooks";
 import type { Reel } from "@/features/reels/types";
+import { useUserProfile } from "@/features/users/hooks";
 import { cn } from "@/lib/utils";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl, resolveImageUrl } from "@/lib/utils/image";
 
 const numberFormat = new Intl.NumberFormat("ru-RU");
 const formatCount = (value: number) => numberFormat.format(value);
@@ -40,7 +41,7 @@ function ReelActions({ reel, tone }: { reel: Reel; tone: Tone }) {
   const toggleFavorite = useToggleFavorite();
 
   const handleShare = async () => {
-    await navigator.clipboard.writeText(`${window.location.origin}/post/${reel.postId}`);
+    await navigator.clipboard.writeText(`${window.location.origin}/post/${reel.id}`);
     toast.success("Ссылка скопирована");
   };
 
@@ -48,22 +49,22 @@ function ReelActions({ reel, tone }: { reel: Reel; tone: Tone }) {
     <div className={cn("flex flex-col items-center gap-4", tone === "light" ? "text-white" : "text-foreground")}>
       <motion.button
         type="button"
-        aria-label={reel.postLike ? "Убрать лайк" : "Поставить лайк"}
+        aria-label={reel.isLiked ? "Убрать лайк" : "Поставить лайк"}
         whileTap={{ scale: 1.25 }}
-        onClick={() => likePost.mutate(reel.postId)}
+        onClick={() => likePost.mutate(reel.id)}
         className="flex flex-col items-center gap-1"
       >
         <Heart
           strokeWidth={1.8}
-          className={cn("size-6", reel.postLike && "fill-red-500 text-red-500")}
+          className={cn("size-6", reel.isLiked && "fill-red-500 text-red-500")}
         />
-        {reel.postLikeCount > 0 && (
-          <span className="text-xs font-semibold">{formatCount(reel.postLikeCount)}</span>
+        {reel.likeCount > 0 && (
+          <span className="text-xs font-semibold">{formatCount(reel.likeCount)}</span>
         )}
       </motion.button>
 
       <Link
-        href={`/post/${reel.postId}`}
+        href={`/post/${reel.id}`}
         aria-label="Комментарии"
         className="flex flex-col items-center gap-1"
       >
@@ -79,10 +80,10 @@ function ReelActions({ reel, tone }: { reel: Reel; tone: Tone }) {
 
       <button
         type="button"
-        aria-label={reel.postFavorite ? "Убрать из сохранённого" : "Сохранить"}
-        onClick={() => toggleFavorite.mutate(reel.postId)}
+        aria-label={reel.isFavorite ? "Убрать из сохранённого" : "Сохранить"}
+        onClick={() => toggleFavorite.mutate(reel.id)}
       >
-        <Bookmark strokeWidth={1.8} className={cn("size-6", reel.postFavorite && "fill-current")} />
+        <Bookmark strokeWidth={1.8} className={cn("size-6", reel.isFavorite && "fill-current")} />
       </button>
 
       <button type="button" aria-label="Ещё" onClick={handleShare}>
@@ -97,24 +98,25 @@ function ReelActions({ reel, tone }: { reel: Reel; tone: Tone }) {
           tone === "light" ? "ring-white/30" : "ring-border",
         )}
       >
-        {resolveImageUrl(reel.userImage) ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={resolveImageUrl(reel.userImage)}
-            alt=""
-            className="size-full object-cover"
-          />
-        ) : (
-          <span className="block size-full bg-gradient-to-br from-fuchsia-500 to-amber-400" />
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={resolveAvatarUrl(reel.userImage)}
+          alt=""
+          className="size-full object-cover"
+        />
       </Link>
     </div>
   );
 }
 
 // Автор + кнопка «Подписаться» (синяя, как в оригинале) под видео слева.
+// Статуса подписки в DTO поста нет, поэтому подтягиваем его из профиля автора —
+// React Query кэширует ответ по userId, так что на повторные reels того же автора
+// лишнего запроса не будет.
 function ReelAuthor({ reel, tone }: { reel: Reel; tone: Tone }) {
   const follow = useFollowUser(reel.userId);
+  const authorProfile = useUserProfile(reel.userId);
+  const isFollowing = authorProfile.data?.isFollowing ?? true;
 
   return (
     <div
@@ -125,7 +127,7 @@ function ReelAuthor({ reel, tone }: { reel: Reel; tone: Tone }) {
     >
       <Link href={`/profile/${reel.userId}`} className="flex items-center gap-2.5">
         <Avatar className={cn("size-8 ring-1", tone === "light" ? "ring-white/40" : "ring-border")}>
-          <AvatarImage src={resolveImageUrl(reel.userImage)} alt={reel.userName ?? ""} />
+          <AvatarImage src={resolveAvatarUrl(reel.userImage)} alt={reel.userName ?? ""} />
           <AvatarFallback className="text-xs">
             {(reel.userName ?? "?").slice(0, 1).toUpperCase()}
           </AvatarFallback>
@@ -133,7 +135,7 @@ function ReelAuthor({ reel, tone }: { reel: Reel; tone: Tone }) {
         <span className="text-sm font-semibold">{reel.userName ?? "Пользователь"}</span>
       </Link>
 
-      {!reel.isSubscriber && (
+      {!isFollowing && (
         <>
           <span className={cn("text-sm", tone === "light" ? "text-white/70" : "text-muted-foreground")}>
             •
@@ -174,7 +176,8 @@ function ReelItem({ reel }: { reel: Reel }) {
     setMuted(video.muted);
   };
 
-  const videoUrl = resolveImageUrl(reel.images);
+  // images теперь массив (пост может нести несколько файлов) — у reel это одно видео.
+  const videoUrl = resolveImageUrl(reel.images[0]);
 
   return (
     <section
@@ -275,7 +278,7 @@ export function ReelsFeed() {
         className="h-dvh w-full snap-y snap-mandatory overflow-y-scroll [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {reels.map((reel) => (
-          <ReelItem key={reel.postId} reel={reel} />
+          <ReelItem key={reel.id} reel={reel} />
         ))}
         <div ref={sentinelRef} className="h-px" />
       </div>

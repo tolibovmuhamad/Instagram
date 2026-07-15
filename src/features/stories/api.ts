@@ -1,29 +1,36 @@
 import { apiClient } from "@/lib/api/client";
 
-import type { StoryGroup } from "./types";
+import type { Story, StoryAudience } from "./types";
 
-// Раздел «сторис» и «подписки» на этом бэкенде масштабируется по подпискам —
-// пока FollowingRelationShip не подключён (Этап 6), get-stories видит только свои сторис.
+// Лента сторис = сторис тех, на кого подписан текущий пользователь. Плоский список,
+// группировку по авторам делает groupStoriesByUser.
 export async function getStories() {
-  const { data } = await apiClient.get<StoryGroup[]>("/Story/get-stories");
+  const { data } = await apiClient.get<Story[]>("/Story/get-stories");
   return data;
 }
 
 export async function getMyStories() {
-  const { data } = await apiClient.get<StoryGroup>("/Story/get-my-stories");
+  const { data } = await apiClient.get<Story[]>("/Story/get-my-stories");
   return data;
 }
 
 export async function getUserStories(userId: string) {
-  const { data } = await apiClient.get<StoryGroup>(`/Story/get-user-stories/${userId}`);
+  const { data } = await apiClient.get<Story[]>(`/Story/get-user-stories/${userId}`);
   return data;
 }
 
-export async function addStory(payload: { image: File; postId?: number }) {
+export interface AddStoryPayload {
+  image: File;
+  postId?: number;
+  audience?: StoryAudience;
+}
+
+export async function addStory(payload: AddStoryPayload) {
   const formData = new FormData();
   formData.append("Image", payload.image);
-  const { data } = await apiClient.post<string>("/Story/AddStories", formData, {
-    params: payload.postId ? { PostId: payload.postId } : undefined,
+  formData.append("Audience", String(payload.audience ?? 0));
+  const { data } = await apiClient.post<Story>("/Story/AddStories", formData, {
+    params: payload.postId ? { postId: payload.postId } : undefined,
   });
   return data;
 }
@@ -33,9 +40,10 @@ export async function deleteStory(id: number) {
   return data;
 }
 
-// Toggle-эндпоинт: возвращает "Liked" / "Disliked" вместо булева значения (проверено вручную).
+// Toggle-эндпоинт: возвращает не булево значение, а готовую фразу («Лайк добавлен.» /
+// «Лайк удалён.»). Отдельного флага «я уже лайкнул» в DTO сторис нет — см. useLikeStory.
 export async function likeStory(storyId: number) {
-  const { data } = await apiClient.post<"Liked" | "Disliked">("/Story/LikeStory", null, {
+  const { data } = await apiClient.post<string>("/Story/LikeStory", null, {
     params: { storyId },
   });
   return data;
@@ -44,7 +52,16 @@ export async function likeStory(storyId: number) {
 // Дедуплицируется на бэкенде — повторный вызов для того же пользователя не создаёт новую запись.
 export async function addStoryView(storyId: number) {
   const { data } = await apiClient.post("/Story/add-story-view", null, {
-    params: { StoryId: storyId },
+    params: { storyId },
   });
+  return data;
+}
+
+export async function replyToStory(storyId: number, text: string) {
+  const { data } = await apiClient.post<boolean>(
+    "/Story/reply",
+    { text },
+    { params: { storyId } },
+  );
   return data;
 }

@@ -18,10 +18,52 @@
 
 ## Бэкенд (НЕ разрабатываем, только интегрируемся)
 
-- ASP.NET Core Web API, PostgreSQL + EF Core, JWT Bearer, Clean Architecture, AutoMapper.
-- Swagger: https://instagram-api.softclub.tj/swagger/index.html
-- **Realtime на бэкенде отсутствует.** Нет SignalR/WebSocket. Чат и уведомления реализуются через REST + периодический опрос (polling — React Query `refetchInterval`), **никогда через сокеты**.
-- CORS на бэкенде уже разрешает `http://localhost:3000` — dev-сервер поднимается там без доп. настройки.
+- ASP.NET Core 8 Web API, PostgreSQL + EF Core, JWT Bearer, Clean Architecture.
+- Swagger: https://instagram-backend-ea2y.onrender.com/swagger/index.html
+- **Realtime на бэкенде отсутствует.** Нет SignalR/WebSocket. Чат и уведомления реализуются через REST + периодический опрос (polling — React Query `refetchInterval`), **никогда через сокеты**. Онлайн-статус — тоже опрос (`/Presence/get-status`).
+- CORS разрешает любой origin (`*`) — dev-сервер и деплой на Vercel работают без согласования.
+- Хостится на Render (free tier): сервис засыпает после ~15 мин простоя, первый запрос после сна может ждать до минуты.
+
+> ⚠️ **Смена бэкенда (июль 2026).** Проект переехал со старого `instagram-api.softclub.tj` на новый. Старый упоминается только в `TZ_Instagram_Frontend (1).md` (исторический документ) — в коде его быть не должно. Новый API — надмножество старого (110 эндпоинтов против 57), но **DTO переименованы**, см. таблицу ниже.
+
+### Что изменилось при переезде (частые грабли)
+
+| Было (старый бэкенд) | Стало (новый) |
+|---|---|
+| JWT claims `sid`, `name` | `userId`, `userName` |
+| Пагинация `totalPage`, `totalRecord` | `totalPages`, `totalRecords` |
+| Post: `postId`, `datePublished`, `postLike`, `postLikeCount`, `postView`, `postFavorite` | `id`, `createdAt`, `isLiked`, `likeCount`, `viewCount`, `isFavorite` |
+| Post нёс в себе `comments[]`, `userLikes[]` | их нет — только счётчики (`commentCount`, `likeCount`) |
+| Comment: `postCommentId`, `dateCommented` | `id`, `createdAt` (+ `parentCommentId`, `likesCount`, `isLiked`) |
+| Profile: `firstName`+`lastName`, `subscribersCount`, `subscriptionsCount`, отдельный запрос статуса подписки | `fullName`, `followersCount`, `followingCount`, `isFollowing`/`isRequested` прямо в профиле |
+| Story: сгруппированы по авторам сервером, поле `liked` | плоский список (группируем в `groupStoriesByUser`), флага «я лайкнул» нет — только счётчик |
+| Chat: `sendUser*` / `receiveUser*` | сразу собеседник: `userId`/`userName`/`userImage` (+ `lastMessage`, `unreadCount`) |
+| `errors[]` содержал строки `"success"` при успехе | `errors[]` пуст при успехе — костыль-фильтр убран |
+| `/Post/get-my-posts` отдавал голый массив | всё в конверте `{data, errors, statusCode}` |
+| Query-параметры в PascalCase (`PageNumber`) | camelCase (`pageNumber`) |
+
+### Модули без схем в Swagger (значения выяснены запросами к API)
+
+Часть модулей описана в Swagger только путями — тела ответов пустые (`content?: never`),
+поэтому сгенерированные типы тут не помогают, а TypeScript ошибку не поймает:
+
+- **`/Chat/create-chat`** возвращает **чат целиком** (`{id, userId, userName, …}`), а не id.
+  На этом уже погорели: объект уходил в URL, `/messages/[object Object]` → 404.
+- **`/Notification/get-notifications`**: `type` 0=лайк, 1=подписка, 2=комментарий;
+  `entityType` 0=пост, 3=пользователь; `entityId` — id поста, у подписки `null`.
+  Зафиксировано в `features/notifications/types.ts`. Отметки прочтения — **`PUT`**.
+- **`/Explore/get-feed`** (персональные рекомендации) и **`/Explore/get-popular`**
+  (cold start) отдают обычную пагинированную ленту постов.
+
+### Картинки: диск на Render эфемерный
+
+Файлы раздаются с `${API_URL}/images/{filename}` (путь верный), но при перезапуске сервиса
+загруженное **исчезает**, а записи в БД остаются — старые посты отдают 404 на картинку.
+Это не баг фронтенда; UI просто показывает заглушку вместо битого изображения.
+
+### Известная дыра в API
+
+**Нет эндпоинта для списка комментариев поста.** Есть `commentCount` в посте, `add/delete/like-comment` и `get-comment-replies` (ответы на КОНКРЕТНЫЙ комментарий по его id), но получить корневые комментарии нечем. Запрошен у backend-команды как `GET /Post/get-comments?postId=…`; вызов уже написан в `features/posts/api.ts` (`getPostComments`) и на 404 отдаёт `null` — UI показывает объяснение вместо пустого списка. Когда эндпоинт появится, всё заработает само.
 
 ## Технологический стек (из ТЗ)
 

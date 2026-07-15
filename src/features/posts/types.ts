@@ -1,35 +1,39 @@
-export interface PostUserRef {
+export interface MentionedUser {
   userId: string;
   userName: string;
-  userPhoto: string | null;
-  fullname: string;
 }
 
 export interface PostComment {
-  postCommentId: number;
+  id: number;
+  postId: number;
+  comment: string;
+  createdAt: string;
   userId: string;
   userName: string | null;
   userImage: string | null;
-  dateCommented: string;
-  comment: string;
+  isVerified: boolean;
+  parentCommentId: number | null;
+  repliesCount: number;
+  likesCount: number;
+  isLiked: boolean;
+  mentionedUsers: MentionedUser[];
 }
 
 export interface Post {
-  postId: number;
+  id: number;
+  title: string | null;
+  content: string | null;
+  createdAt: string;
+  isReel: boolean;
   userId: string;
   userName: string | null;
   userImage: string | null;
-  datePublished: string;
+  isVerified: boolean;
   images: string[];
-  title: string | null;
-  content: string | null;
-  postLike: boolean;
-  postLikeCount: number;
-  userLikes: PostUserRef[] | null;
+  likeCount: number;
   commentCount: number;
-  comments: PostComment[];
-  postView: number;
-  userViews: PostUserRef[] | null;
-  postFavorite: boolean;
-  userFavorite: PostUserRef[] | null;
+  viewCount: number;
+  isLiked: boolean;
+  isFavorite: boolean;
+  mentionedUsers: MentionedUser[];
 }

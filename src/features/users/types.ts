@@ -1,31 +1,35 @@
 export type Gender = "Male" | "Female";
 
-export interface UserProfile {
-  userName: string;
-  image: string | null;
-  dateUpdated: string;
-  gender: Gender;
-  postCount: number;
-  subscribersCount: number;
-  subscriptionsCount: number;
-  firstName: string;
-  lastName: string;
-  locationId: number;
-  dob: string;
-  occupation: string;
-  about: string;
-}
+// Бэкенд отдаёт gender числом: 0 — Female, 1 — Male.
+export type GenderCode = 0 | 1;
 
-export interface UserProfileWithFollowStatus extends UserProfile {
-  isSubscriber: boolean;
+export const GENDER_TO_CODE: Record<Gender, GenderCode> = { Female: 0, Male: 1 };
+export const GENDER_FROM_CODE: Record<GenderCode, Gender> = { 0: "Female", 1: "Male" };
+
+export interface UserProfile {
+  id: number;
+  userId: string;
+  userName: string;
+  fullName: string;
+  about: string | null;
+  gender: GenderCode;
+  image: string | null;
+  postCount: number;
+  followersCount: number;
+  followingCount: number;
+  isFollowing: boolean;
+  isPrivate: boolean;
+  isVerified: boolean;
+  isRequested: boolean;
 }
 
 export interface UserSearchResult {
   id: string;
-  avatar: string | null;
-  fullName: string;
-  subscribersCount: number;
   userName: string;
+  email: string;
+  fullName: string;
+  avatar: string | null;
+  isVerified: boolean;
 }
 
 export interface SearchHistoryItem {

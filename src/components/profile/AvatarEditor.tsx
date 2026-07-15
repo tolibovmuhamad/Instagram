@@ -6,7 +6,7 @@ import { Camera, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useDeleteAvatar } from "@/features/users/hooks";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl } from "@/lib/utils/image";
 
 import { cn } from "@/lib/utils";
 
@@ -41,7 +41,7 @@ export function AvatarEditor({ image, fallback, className }: AvatarEditorProps) 
   return (
     <div className="group/avatar relative">
       <Avatar className={cn("size-24", className)}>
-        <AvatarImage src={resolveImageUrl(image)} alt={fallback} />
+        <AvatarImage src={resolveAvatarUrl(image)} alt={fallback} />
         <AvatarFallback className="text-2xl">{fallback.slice(0, 1).toUpperCase()}</AvatarFallback>
       </Avatar>
 

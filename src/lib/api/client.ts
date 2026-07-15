@@ -4,8 +4,15 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/store/auth";
 import { ApiError, type ApiEnvelope } from "./types";
 
+declare module "axios" {
+  // Вызывающий код может сам обработать ошибку и не хочет тоста поверх неё.
+  export interface AxiosRequestConfig {
+    skipErrorToast?: boolean;
+  }
+}
+
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "https://instagram-api.softclub.tj",
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "https://instagram-backend-ea2y.onrender.com",
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -28,8 +35,6 @@ function isEnvelope(body: unknown): body is ApiEnvelope<unknown> {
 
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Не все эндпоинты оборачивают ответ в конверт {data, errors, statusCode} —
-    // например /Post/get-my-posts отдаёт голый JSON-массив. Пропускаем такие ответы как есть.
     if (!isEnvelope(response.data)) {
       return response;
     }
@@ -37,30 +42,20 @@ apiClient.interceptors.response.use(
     const envelope = response.data;
 
     if (envelope.errors && envelope.errors.length > 0) {
-      // Часть write-эндпоинтов (update-user-profile, delete-user-image-profile,
-      // add/delete-following-relation-ship и т.п.) на успехе кладёт в errors[] строки вида
-      // "success", "success followed", "success un followed" вместо того, чтобы оставить
-      // массив пустым — это не ошибка, отфильтровываем такой шум по префиксу "success".
-      const meaningfulErrors = envelope.errors.filter(
-        (message) => !message.trim().toLowerCase().startsWith("success"),
-      );
-
-      if (meaningfulErrors.length > 0) {
-        const message = extractMessage(meaningfulErrors, "Произошла ошибка");
-        toast.error(message);
-        return Promise.reject(new ApiError(message, envelope.statusCode, meaningfulErrors));
-      }
+      const message = extractMessage(envelope.errors, "Произошла ошибка");
+      toast.error(message);
+      return Promise.reject(new ApiError(message, envelope.statusCode, envelope.errors));
     }
 
-    // Пагинированные списки помимо data содержат pageNumber/pageSize/totalPage/totalRecord
+    // Пагинированные списки помимо data содержат pageNumber/pageSize/totalPages/totalRecords
     // на верхнем уровне конверта — собираем их в единый объект для infinite scroll.
     if (envelope.pageNumber !== undefined) {
       response.data = {
         items: envelope.data,
         pageNumber: envelope.pageNumber,
         pageSize: envelope.pageSize,
-        totalPage: envelope.totalPage,
-        totalRecord: envelope.totalRecord,
+        totalPages: envelope.totalPages,
+        totalRecords: envelope.totalRecords,
       } as never;
     } else {
       response.data = envelope.data as never;
@@ -76,7 +71,10 @@ apiClient.interceptors.response.use(
       useAuthStore.getState().logout();
     }
 
-    toast.error(message);
+    if (!error.config?.skipErrorToast) {
+      toast.error(message);
+    }
+
     return Promise.reject(new ApiError(message, error.response?.status, envelope?.errors ?? []));
   },
 );

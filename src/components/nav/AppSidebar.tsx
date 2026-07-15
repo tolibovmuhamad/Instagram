@@ -13,9 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useUnreadNotificationCount } from "@/features/notifications/hooks";
 import { useMyProfile } from "@/features/users/hooks";
 import { cn } from "@/lib/utils";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 
 import { NAV_ITEMS } from "./nav-items";
@@ -56,11 +57,13 @@ export function AppSidebar() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const profileQuery = useMyProfile();
+  const unreadCount = useUnreadNotificationCount();
   const { resolvedTheme, setTheme } = useTheme();
 
   const profileHref = user ? `/profile/${user.id}` : "/profile";
   const isProfileActive = !!user && pathname === `/profile/${user.id}`;
   const isDark = resolvedTheme === "dark";
+  const hasUnread = (unreadCount.data ?? 0) > 0;
 
   return (
     <nav
@@ -83,6 +86,7 @@ export function AppSidebar() {
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
+          const showUnreadDot = item.href === "/notifications" && hasUnread;
           return (
             <Link
               key={item.label}
@@ -92,13 +96,21 @@ export function AppSidebar() {
               aria-current={isActive ? "page" : undefined}
               className={rowClass}
             >
-              <Icon
-                strokeWidth={2}
-                className={cn(
-                  "size-6 shrink-0 transition-transform group-hover/row:scale-105 group-active/row:scale-95",
-                  isActive && item.href === "/" && "fill-current",
+              <span className="relative shrink-0">
+                <Icon
+                  strokeWidth={2}
+                  className={cn(
+                    "size-6 transition-transform group-hover/row:scale-105 group-active/row:scale-95",
+                    isActive && item.href === "/" && "fill-current",
+                  )}
+                />
+                {showUnreadDot && (
+                  <span
+                    aria-label="Есть новые уведомления"
+                    className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-destructive ring-2 ring-background"
+                  />
                 )}
-              />
+              </span>
               <span className={cn(labelClass, isActive && "font-semibold")}>
                 {item.label}
               </span>
@@ -122,7 +134,7 @@ export function AppSidebar() {
             )}
           >
             <AvatarImage
-              src={resolveImageUrl(profileQuery.data?.image)}
+              src={resolveAvatarUrl(profileQuery.data?.image)}
               alt={user?.userName ?? ""}
             />
             <AvatarFallback className="bg-muted text-[10px] font-medium text-muted-foreground">

@@ -3,22 +3,21 @@ import { apiClient } from "@/lib/api/client";
 import type { Paginated } from "@/lib/api/types";
 
 import type { UpdateProfileFormValues } from "./schemas";
+import { GENDER_TO_CODE } from "./types";
 import type {
-  Gender,
   SearchHistoryItem,
   UserProfile,
-  UserProfileWithFollowStatus,
   UserSearchHistoryItem,
   UserSearchResult,
 } from "./types";
-
-const GENDER_TO_INT: Record<Gender, 0 | 1> = { Female: 0, Male: 1 };
 
 export async function getMyProfile() {
   const { data } = await apiClient.get<UserProfile>("/UserProfile/get-my-profile");
   return data;
 }
 
+// Профиль сам по себе несёт isFollowing/isRequested относительно текущего пользователя,
+// так что отдельный запрос статуса подписки больше не нужен.
 export async function getUserProfileById(id: string) {
   const { data } = await apiClient.get<UserProfile>("/UserProfile/get-user-profile-by-id", {
     params: { id },
@@ -26,18 +25,10 @@ export async function getUserProfileById(id: string) {
   return data;
 }
 
-export async function getIsFollowUserProfileById(followingUserId: string) {
-  const { data } = await apiClient.get<UserProfileWithFollowStatus>(
-    "/UserProfile/get-is-follow-user-profile-by-id",
-    { params: { followingUserId } },
-  );
-  return data;
-}
-
 export async function updateUserProfile(values: UpdateProfileFormValues) {
   const { data } = await apiClient.put<null>("/UserProfile/update-user-profile", {
     about: values.about,
-    gender: GENDER_TO_INT[values.gender],
+    gender: GENDER_TO_CODE[values.gender],
   });
   return data;
 }
@@ -61,7 +52,7 @@ export interface GetPostFavoritesParams {
 
 export async function getPostFavorites(params: GetPostFavoritesParams) {
   const { data } = await apiClient.get<Paginated<Post>>("/UserProfile/get-post-favorites", {
-    params: { PageNumber: params.pageNumber, PageSize: params.pageSize },
+    params: { pageNumber: params.pageNumber, pageSize: params.pageSize },
   });
   return data;
 }
@@ -75,9 +66,9 @@ export interface SearchUsersParams {
 export async function searchUsers(params: SearchUsersParams) {
   const { data } = await apiClient.get<Paginated<UserSearchResult>>("/User/get-users", {
     params: {
-      UserName: params.userName,
-      PageNumber: params.pageNumber,
-      PageSize: params.pageSize,
+      userName: params.userName,
+      pageNumber: params.pageNumber,
+      pageSize: params.pageSize,
     },
   });
   return data;
@@ -89,7 +80,7 @@ export async function getSearchHistories() {
 }
 
 export async function addSearchHistory(text: string) {
-  await apiClient.post("/User/add-search-history", null, { params: { Text: text } });
+  await apiClient.post("/User/add-search-history", null, { params: { text } });
 }
 
 export async function deleteSearchHistory(id: number) {
@@ -109,7 +100,7 @@ export async function getUserSearchHistories() {
 
 export async function addUserSearchHistory(userSearchId: string) {
   await apiClient.post("/User/add-user-search-history", null, {
-    params: { UserSearchId: userSearchId },
+    params: { userSearchId },
   });
 }
 

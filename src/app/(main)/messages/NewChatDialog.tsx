@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCreateChat } from "@/features/chat/hooks";
 import { useSearchUsers } from "@/features/users/hooks";
-import { resolveImageUrl } from "@/lib/utils/image";
+import { resolveAvatarUrl } from "@/lib/utils/image";
 
 const DEBOUNCE_MS = 400;
 
@@ -34,10 +34,11 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
 
   const handleSelect = (userId: string) => {
     createChat.mutate(userId, {
-      onSuccess: (chatId) => {
+      // Эндпоинт отдаёт чат целиком (создаёт новый или возвращает существующий), а не его id.
+      onSuccess: (chat) => {
         onOpenChange(false);
         setInputValue("");
-        router.push(`/messages/${chatId}`);
+        router.push(`/messages/${chat.id}`);
       },
     });
   };
@@ -79,7 +80,7 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
               className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-muted"
             >
               <Avatar className="size-10">
-                <AvatarImage src={resolveImageUrl(user.avatar)} alt={user.userName} />
+                <AvatarImage src={resolveAvatarUrl(user.avatar)} alt={user.userName} />
                 <AvatarFallback>{user.userName.slice(0, 1).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div>

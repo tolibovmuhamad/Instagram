@@ -10,7 +10,7 @@ export interface GetReelsParams {
 
 export async function getReels(params: GetReelsParams) {
   const { data } = await apiClient.get<Paginated<Reel>>("/Post/get-reels", {
-    params: { PageNumber: params.pageNumber, PageSize: params.pageSize },
+    params: { pageNumber: params.pageNumber, pageSize: params.pageSize },
   });
   return data;
 }
