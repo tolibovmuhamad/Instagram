@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Search } from "lucide-react";
 
@@ -9,6 +9,22 @@ import { useAuthStore } from "@/store/auth";
 
 import { AppsAndSitesPanel } from "./AppsAndSitesPanel";
 import { ChangePasswordPanel } from "./ChangePasswordPanel";
+import {
+  ArchivePanel,
+  BlockedPanel,
+  CloseFriendsPanel,
+  CommentsPanel,
+  HiddenWordsPanel,
+  LikeCountsPanel,
+  MessagesRepliesPanel,
+  MutedPanel,
+  NotificationsPanel,
+  PrivacyPanel,
+  RepostsPanel,
+  RestrictedPanel,
+  StoryLocationPanel,
+  TagsMentionsPanel,
+} from "./panels";
 import { getSettingsTitle, SETTINGS_SECTIONS } from "./settings-nav";
 
 const FOOTER_LINKS = [
@@ -36,9 +52,28 @@ function MetaLogo() {
   );
 }
 
+const PANELS: Record<string, () => ReactElement> = {
+  apps: AppsAndSitesPanel,
+  "accounts-center": ChangePasswordPanel,
+  notifications: NotificationsPanel,
+  privacy: PrivacyPanel,
+  "close-friends": CloseFriendsPanel,
+  blocked: BlockedPanel,
+  "story-location": StoryLocationPanel,
+  "messages-replies": MessagesRepliesPanel,
+  tags: TagsMentionsPanel,
+  comments: CommentsPanel,
+  reposts: RepostsPanel,
+  restricted: RestrictedPanel,
+  "hidden-words": HiddenWordsPanel,
+  muted: MutedPanel,
+  "like-counts": LikeCountsPanel,
+  archiving: ArchivePanel,
+};
+
 function RightPanel({ active }: { active: string }) {
-  if (active === "apps") return <AppsAndSitesPanel />;
-  if (active === "accounts-center") return <ChangePasswordPanel />;
+  const Panel = PANELS[active];
+  if (Panel) return <Panel />;
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-24 text-center">
       <p className="text-sm text-muted-foreground">Этот раздел находится в разработке.</p>

@@ -1,7 +1,7 @@
 import { apiClient } from "@/lib/api/client";
 import type { Paginated } from "@/lib/api/types";
 
-import type { FollowUser } from "./types";
+import type { FollowRequestUser, FollowUser } from "./types";
 
 // Эндпоинт не пагинирован — всегда отдаёт полный список.
 export async function getSubscribers(userId: string) {
@@ -45,7 +45,7 @@ export interface GetFollowRequestsParams {
 }
 
 export async function getFollowRequests(params: GetFollowRequestsParams) {
-  const { data } = await apiClient.get<Paginated<FollowUser>>(
+  const { data } = await apiClient.get<Paginated<FollowRequestUser>>(
     "/FollowingRelationShip/get-follow-requests",
     { params },
   );

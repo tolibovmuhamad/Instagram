@@ -37,7 +37,14 @@ export interface SearchHistoryItem {
   text: string;
 }
 
+// /User/get-user-search-histories отдаёт плоскую запись, а не вложенного пользователя:
+// {id, searchedUserId, searchedUserName, searchedUserAvatar, createdAt} — проверено
+// запросом к API. Вложенного объекта `users` (как было на старом бэкенде) больше нет,
+// как и fullName: в истории поиска доступны только ник и аватар.
 export interface UserSearchHistoryItem {
   id: number;
-  users: UserSearchResult;
+  searchedUserId: string;
+  searchedUserName: string;
+  searchedUserAvatar: string | null;
+  createdAt: string;
 }

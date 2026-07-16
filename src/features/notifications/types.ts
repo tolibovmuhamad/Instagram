@@ -8,6 +8,10 @@ export const NOTIFICATION_TYPE = {
   Like: 0,
   Follow: 1,
   Comment: 2,
+  // Значения 6/7 выяснены запросами к API (закрытый аккаунт + запрос на подписку):
+  // 6 — кто-то запросил подписку на закрытый аккаунт, 7 — ваш запрос приняли.
+  FollowRequest: 6,
+  FollowRequestAccepted: 7,
 } as const;
 
 export const NOTIFICATION_ENTITY = {

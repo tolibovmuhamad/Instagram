@@ -141,3 +141,13 @@
     width: 100%;
   }
 }
+
+/* Индикатор неопределённой загрузки (публикация истории): бегунок слева направо. */
+@keyframes story-loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}

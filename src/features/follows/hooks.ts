@@ -132,6 +132,8 @@ export function useRespondToFollowRequest() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: followKeys.requests });
       queryClient.invalidateQueries({ queryKey: userKeys.myProfile });
+      // Уведомление-запрос (type 6) должно исчезнуть/обновиться после ответа.
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }

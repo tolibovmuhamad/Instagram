@@ -21,6 +21,8 @@ import { NOTIFICATION_TYPE, type AppNotification } from "@/features/notification
 import { cn } from "@/lib/utils";
 import { resolveAvatarUrl } from "@/lib/utils/image";
 
+import { FollowRequestsSection } from "./FollowRequestsSection";
+
 // Уведомления схлопнуты по объекту: «alice и ещё 3» — как в оригинале.
 function describe(notification: AppNotification) {
   const [actor] = notification.actors;
@@ -35,15 +37,25 @@ function describe(notification: AppNotification) {
       return `${who}${suffix} прокомментировал(а) вашу публикацию`;
     case NOTIFICATION_TYPE.Follow:
       return `${who}${suffix} подписался(ась) на вас`;
+    case NOTIFICATION_TYPE.FollowRequest:
+      return `${who}${suffix} запросил(а) подписку на вас`;
+    case NOTIFICATION_TYPE.FollowRequestAccepted:
+      return `${who}${suffix} принял(а) ваш запрос на подписку`;
     default:
       // Бэкенд может завести новый тип — лучше нейтральный текст, чем пустая строка.
       return `${who}${suffix} отреагировал(а) на ваш контент`;
   }
 }
 
-// Лайк и комментарий относятся к посту, подписка — к человеку.
+// Лайк и комментарий относятся к посту; подписка и запросы на подписку — к человеку.
+const USER_NOTIFICATION_TYPES: number[] = [
+  NOTIFICATION_TYPE.Follow,
+  NOTIFICATION_TYPE.FollowRequest,
+  NOTIFICATION_TYPE.FollowRequestAccepted,
+];
+
 function targetHref(notification: AppNotification) {
-  if (notification.type === NOTIFICATION_TYPE.Follow) {
+  if (USER_NOTIFICATION_TYPES.includes(notification.type)) {
     const [actor] = notification.actors;
     return actor ? `/profile/${actor.id}` : null;
   }
@@ -85,6 +97,8 @@ export function NotificationsView() {
           </Button>
         )}
       </div>
+
+      <FollowRequestsSection />
 
       {query.isPending && (
         <div className="flex flex-col gap-4">

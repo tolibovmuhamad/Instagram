@@ -41,6 +41,10 @@ export interface StoryGroup {
 export function groupStoriesByUser(stories: Story[]): StoryGroup[] {
   const groups = new Map<string, StoryGroup>();
 
+  if (!Array.isArray(stories)) {
+    return [];
+  }
+
   for (const story of stories) {
     const existing = groups.get(story.userId);
     if (existing) {

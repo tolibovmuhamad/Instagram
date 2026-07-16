@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { useBrokenImage } from "@/lib/hooks/use-broken-image";
 import { cn } from "@/lib/utils";
 import { resolveImageUrl } from "@/lib/utils/image";
 import { isVideoFile } from "@/lib/utils/media";
@@ -22,12 +23,15 @@ interface PostMediaProps {
 
 export function PostMedia({ images, alt, className, variant = "detail" }: PostMediaProps) {
   const [index, setIndex] = useState(0);
+  // Файл мог пропасть с сервера — тогда вместо битой картинки показываем ту же
+  // заглушку, что и при полном отсутствии медиа (см. useBrokenImage).
+  const { isBroken, imageProps } = useBrokenImage();
   const filename = images[index];
   const url = resolveImageUrl(filename);
   const hasMultiple = images.length > 1;
   const isFeed = variant === "feed";
 
-  if (!url) {
+  if (!url || isBroken(filename)) {
     return (
       <div
         className={cn(
@@ -64,7 +68,7 @@ export function PostMedia({ images, alt, className, variant = "detail" }: PostMe
       {isVideoFile(filename) ? (
         <video src={url} controls className="h-full w-full object-contain" />
       ) : (
-        <Image src={url} alt={alt} fill sizes="600px" className="object-contain" />
+        <Image src={url} alt={alt} fill sizes="600px" className="object-contain" {...imageProps(filename)} />
       )}
 
       {hasMultiple && (

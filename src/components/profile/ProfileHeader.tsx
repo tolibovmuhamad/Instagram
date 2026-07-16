@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Settings } from "lucide-react";
+import { Lock, Plus, Settings } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -23,9 +23,11 @@ import { useHighlightsStore } from "@/store/highlights";
 import { HighlightPickerDialog } from "@/components/story/HighlightPickerDialog";
 import { StoryViewer } from "@/components/story/StoryViewer";
 import { AvatarEditor } from "./AvatarEditor";
+import { CloseFriendButton } from "./CloseFriendButton";
 import { EditProfileDialog } from "./EditProfileDialog";
 import { FollowButton } from "./FollowButton";
 import { FollowListDialog } from "./FollowListDialog";
+import { ProfileOptionsMenu } from "./ProfileOptionsMenu";
 
 interface ProfileHeaderProps {
   userId: string;
@@ -119,6 +121,8 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
                 image={profile.image}
                 fallback={profile.userName}
                 className="size-20 md:size-[150px]"
+                hasStoryRing={archive.length > 0}
+                onAvatarClick={archive.length > 0 ? handleOpenArchive : undefined}
               />
             ) : (
               <Avatar className="size-20 md:size-[150px]">
@@ -132,7 +136,15 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
 
           <div className="flex-1 space-y-3 pt-1 md:pt-3">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold tracking-tight">{profile.userName}</h1>
+              <h1 className="flex items-center gap-1.5 text-xl font-semibold tracking-tight">
+                {profile.userName}
+                {profile.isPrivate && (
+                  <Lock
+                    className="size-4 text-muted-foreground"
+                    aria-label="Закрытый аккаунт"
+                  />
+                )}
+              </h1>
               {isOwnProfile && (
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -188,6 +200,9 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+              {!isOwnProfile && (
+                <ProfileOptionsMenu userId={userId} userName={profile.userName} />
+              )}
             </div>
 
             {(displayName || profile.about) && (
@@ -230,14 +245,17 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
               </button>
             </>
           ) : (
-            <div className="flex-1">
-              <FollowButton
-                targetUserId={userId}
-                isFollowing={profile.isFollowing}
-                isRequested={profile.isRequested}
-                isPrivate={profile.isPrivate}
-              />
-            </div>
+            <>
+              <div className="flex-1">
+                <FollowButton
+                  targetUserId={userId}
+                  isFollowing={profile.isFollowing}
+                  isRequested={profile.isRequested}
+                  isPrivate={profile.isPrivate}
+                />
+              </div>
+              <CloseFriendButton userId={userId} />
+            </>
           )}
         </div>
 
@@ -287,13 +305,14 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
         />
       )}
 
-      {/* Вьюер архива: здесь удаление настоящее (DeleteStory). */}
+      {/* Вьюер архива: удаление настоящее (DeleteStory) + можно добавить в «Актуальное». */}
       {isArchiveViewerOpen && archiveGroup && (
         <StoryViewer
           groups={[archiveGroup]}
           initialGroupIndex={0}
           onClose={() => setIsArchiveViewerOpen(false)}
           onStoryViewed={() => {}}
+          onAddHighlight={(storyId) => addHighlights(userId, [storyId])}
         />
       )}
 

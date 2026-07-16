@@ -1,7 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const CHROMIUM_EXECUTABLE_PATH =
-  "C:/Users/XBIT-2025/AppData/Local/ms-playwright/chromium-1228/chrome-win64/chrome.exe";
+// Путь к Chromium раньше был захардкожен под домашнюю папку одного разработчика,
+// поэтому e2e не запускались ни у кого другого. Теперь по умолчанию используется
+// браузер, который ставит сам Playwright (`npx playwright install chromium`), а
+// переопределить путь можно через PLAYWRIGHT_CHROMIUM_PATH — если, например,
+// скачивание headless-shell на машине тормозит и проще указать локальный Chrome.
+const CHROMIUM_EXECUTABLE_PATH = process.env.PLAYWRIGHT_CHROMIUM_PATH;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -17,9 +21,9 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        // Headless chromium-headless-shell download is slow/flaky on this machine —
-        // reuse the already-installed full Chromium binary instead (see project memory).
-        launchOptions: { executablePath: CHROMIUM_EXECUTABLE_PATH },
+        ...(CHROMIUM_EXECUTABLE_PATH
+          ? { launchOptions: { executablePath: CHROMIUM_EXECUTABLE_PATH } }
+          : {}),
       },
     },
   ],
