@@ -9,6 +9,7 @@ import { Bookmark, Heart, MessageCircle, MoreHorizontal, Send, Smile, X } from "
 import { toast } from "sonner";
 
 import { CommentList } from "@/components/post/CommentList";
+import { PostInsights } from "@/components/post/PostInsights";
 import { PostMedia } from "@/components/post/PostMedia";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -253,7 +254,18 @@ export function PostDetailView({ postId }: { postId: number }) {
                 </p>
               )}
 
-              <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+              {/* Статистика — только автору поста, как «Insights» в Instagram. */}
+              {currentUserId === post.userId && (
+                <PostInsights
+                  className="mt-3"
+                  viewCount={post.viewCount}
+                  likeCount={post.likeCount}
+                  commentCount={post.commentCount}
+                  isFavorite={post.isFavorite}
+                />
+              )}
+
+              <p className="mt-2 text-[10px] uppercase tracking-wide text-muted-foreground">
                 {format(new Date(post.createdAt), "d MMMM", { locale: ru })}
               </p>
             </div>

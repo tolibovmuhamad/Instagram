@@ -11,6 +11,7 @@ import { useMyProfile } from "@/features/users/hooks";
 import { cn } from "@/lib/utils";
 import { resolveAvatarUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
+import { useHighlightsStore } from "@/store/highlights";
 
 import { CreateStoryDialog } from "./CreateStoryDialog";
 import { StoryViewer } from "./StoryViewer";
@@ -21,6 +22,7 @@ export function StoryAvatarRail() {
   const storiesQuery = useStories();
   const myStoriesQuery = useMyStories();
   const myProfileQuery = useMyProfile();
+  const addHighlights = useHighlightsStore((state) => state.addHighlights);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [viewerGroupIndex, setViewerGroupIndex] = useState<number | null>(null);
@@ -73,6 +75,15 @@ export function StoryAvatarRail() {
   const isGroupUnviewed = (groupIndex: number) =>
     groups[groupIndex].stories.some((story) => !viewedStoryIds.has(story.id));
 
+  // Кольцо истории: зелёное — если это история «только для близких друзей» (audience=1),
+  // как в оригинальном Instagram; иначе градиент (непросмотренные) или серое (просмотренные).
+  const ringClass = (group: (typeof groups)[number], active: boolean) => {
+    if (group.stories.some((story) => story.audience === 1)) return "bg-green-500";
+    return active
+      ? "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600"
+      : "bg-muted";
+  };
+
   if (storiesQuery.isPending) {
     return (
       <div className="flex gap-4 overflow-x-auto py-4">
@@ -89,9 +100,7 @@ export function StoryAvatarRail() {
         <div
           className={cn(
             "relative flex size-20 items-center justify-center rounded-full p-0.5",
-            ownGroup && ownGroup.stories.length > 0
-              ? "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600"
-              : "bg-muted",
+            ownGroup && ownGroup.stories.length > 0 ? ringClass(ownGroup, true) : "bg-muted",
           )}
         >
           {ownGroup && ownGroup.stories.length > 0 ? (
@@ -142,9 +151,7 @@ export function StoryAvatarRail() {
                 onClick={() => setViewerGroupIndex(groupIndex)}
                 className={cn(
                   "flex size-20 items-center justify-center rounded-full p-0.5",
-                  isGroupUnviewed(groupIndex)
-                    ? "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600"
-                    : "bg-muted",
+                  ringClass(group, isGroupUnviewed(groupIndex)),
                 )}
               >
                 <Avatar className="size-full border-2 border-background">
@@ -163,6 +170,9 @@ export function StoryAvatarRail() {
           initialGroupIndex={viewerGroupIndex}
           onClose={() => setViewerGroupIndex(null)}
           onStoryViewed={markViewed}
+          onAddHighlight={
+            currentUserId ? (storyId) => addHighlights(currentUserId, [storyId]) : undefined
+          }
         />
       )}
 

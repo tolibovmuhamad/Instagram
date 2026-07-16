@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
 
+import { PostGrid } from "@/components/post/PostGrid";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePopularPostsInfinite } from "@/features/posts/hooks";
 import {
   useAddSearchHistory,
   useAddUserSearchHistory,
@@ -46,13 +48,18 @@ export function SearchView() {
   const isSearching = debouncedQuery.length > 0;
   const results = searchQuery.data?.items ?? [];
 
+  // Популярное (рилс/видео) под поиском — как на странице поиска Instagram. Грузим только
+  // когда не идёт поиск по тексту.
+  const popularQuery = usePopularPostsInfinite(!isSearching);
+  const popularPosts = popularQuery.data?.pages.flatMap((page) => page.items) ?? [];
+
   const handleSubmitText = () => {
     if (inputValue.trim()) addSearchHistory.mutate(inputValue.trim());
   };
 
   return (
-    <div className="mx-auto w-full max-w-md p-4">
-      <div className="relative mb-4">
+    <div className="mx-auto w-full max-w-[975px] px-2 py-4 md:px-4">
+      <div className="relative mx-auto mb-6 max-w-md">
         <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={inputValue}
@@ -67,7 +74,7 @@ export function SearchView() {
       </div>
 
       {isSearching ? (
-        <div className="space-y-1">
+        <div className="mx-auto max-w-md space-y-1">
           {searchQuery.isPending &&
             Array.from({ length: 5 }).map((_, index) => (
               <div key={index} className="flex items-center gap-3 p-2">
@@ -103,7 +110,8 @@ export function SearchView() {
           ))}
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
+          <div className="mx-auto max-w-md space-y-6">
           {(userSearchHistories.data?.length ?? 0) > 0 && (
             <section>
               <div className="mb-2 flex items-center justify-between">
@@ -124,22 +132,19 @@ export function SearchView() {
                     className="flex items-center gap-3 rounded-md p-2 hover:bg-muted"
                   >
                     <Link
-                      href={`/profile/${entry.users.id}`}
+                      href={`/profile/${entry.searchedUserId}`}
                       className="flex flex-1 items-center gap-3"
                     >
                       <Avatar className="size-10">
                         <AvatarImage
-                          src={resolveAvatarUrl(entry.users.avatar)}
-                          alt={entry.users.userName}
+                          src={resolveAvatarUrl(entry.searchedUserAvatar)}
+                          alt={entry.searchedUserName}
                         />
                         <AvatarFallback>
-                          {entry.users.userName.slice(0, 1).toUpperCase()}
+                          {entry.searchedUserName.slice(0, 1).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{entry.users.userName}</p>
-                        <p className="text-xs text-muted-foreground">{entry.users.fullName}</p>
-                      </div>
+                      <p className="text-sm font-medium">{entry.searchedUserName}</p>
                     </Link>
                     <Button
                       type="button"
@@ -198,6 +203,21 @@ export function SearchView() {
               </div>
             </section>
           )}
+          </div>
+
+          {/* Популярное (рилс/видео) — как на странице поиска Instagram. */}
+          <section>
+            <h2 className="mb-3 px-1 text-sm font-semibold text-muted-foreground">Популярное</h2>
+            <PostGrid
+              posts={popularPosts}
+              isLoading={popularQuery.isPending}
+              isError={popularQuery.isError}
+              hasNextPage={popularQuery.hasNextPage}
+              isFetchingNextPage={popularQuery.isFetchingNextPage}
+              onLoadMore={() => popularQuery.fetchNextPage()}
+              emptyMessage="Пока нет популярных публикаций"
+            />
+          </section>
         </div>
       )}
     </div>

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Bookmark,
   ChevronDown,
   ChevronUp,
+  Eye,
   Heart,
   MessageCircle,
   MoreHorizontal,
@@ -20,15 +22,24 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFollowUser } from "@/features/follows/hooks";
-import { useLikePost, useToggleFavorite } from "@/features/posts/hooks";
+import { useLikePost, useToggleFavorite, useViewPost } from "@/features/posts/hooks";
 import { useReelsInfinite } from "@/features/reels/hooks";
 import type { Reel } from "@/features/reels/types";
 import { useUserProfile } from "@/features/users/hooks";
+import { useBrokenImage } from "@/lib/hooks/use-broken-image";
 import { cn } from "@/lib/utils";
 import { resolveAvatarUrl, resolveImageUrl } from "@/lib/utils/image";
+import { isVideoFile } from "@/lib/utils/media";
+import { plural, VIEW_FORMS } from "@/lib/utils/plural";
 
 const numberFormat = new Intl.NumberFormat("ru-RU");
 const formatCount = (value: number) => numberFormat.format(value);
+
+// Высота одного «экрана» Reels. На мобильном layout резервирует под нижний таб-бар
+// pb-16, а h-dvh про этот отступ не знает — из-за чего низ кадра (автор и подпись)
+// уезжал под таб-бар. Поэтому на мобильном вычитаем те же 4rem, на десктопе (таб-бара
+// нет) — полная высота вьюпорта.
+const REEL_VIEWPORT = "h-[calc(100dvh-4rem)] md:h-dvh";
 
 // tone="dark" — тёмные иконки в светлых полях по бокам видео (десктопный веб-Reels).
 // tone="light" — белые иконки поверх видео (мобильный полноэкранный режим).
@@ -89,6 +100,18 @@ function ReelActions({ reel, tone }: { reel: Reel; tone: Tone }) {
       <button type="button" aria-label="Ещё" onClick={handleShare}>
         <MoreHorizontal strokeWidth={1.8} className="size-6" />
       </button>
+
+      {/* Просмотры: единственная метрика reel, которую бэкенд отдаёт готовым числом
+          (viewCount) — засчитываются в ReelItem, когда reel попадает в кадр. */}
+      <div className="flex flex-col items-center gap-1" title="Просмотры">
+        <Eye strokeWidth={1.8} className="size-6" aria-hidden />
+        <span className="text-xs font-semibold" aria-hidden>
+          {formatCount(reel.viewCount)}
+        </span>
+        <span className="sr-only">
+          {formatCount(reel.viewCount)} {plural(reel.viewCount, VIEW_FORMS)}
+        </span>
+      </div>
 
       <Link
         href={`/profile/${reel.userId}`}
@@ -158,6 +181,19 @@ function ReelItem({ reel }: { reel: Reel }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { ref: inViewRef, inView } = useInView({ threshold: 0.6 });
   const [muted, setMuted] = useState(true);
+  const { mutate: registerView } = useViewPost();
+  const viewedRef = useRef(false);
+  // Файл мог пропасть с сервера — тогда вместо битой картинки показываем ту же
+  // заглушку, что и у reel вообще без медиа (см. useBrokenImage).
+  const { isBroken, imageProps } = useBrokenImage();
+
+  // Бэкенд принимает у поста только картинки (.jpg/.png/.gif/.webp/.bmp — проверено
+  // запросом: mp4 отклоняется с «Недопустимое расширение файла»), поэтому reel сейчас
+  // всегда изображение. Ветку с <video> оставляем: тип определяется по расширению,
+  // так что реальное видео заработает само, как только бэкенд начнёт его принимать.
+  const filename = reel.images[0];
+  const mediaUrl = resolveImageUrl(filename);
+  const isVideo = !!filename && isVideoFile(filename);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -169,6 +205,13 @@ function ReelItem({ reel }: { reel: Reel }) {
     }
   }, [inView]);
 
+  // Просмотр засчитывается один раз за монтирование, когда reel реально попал в кадр.
+  useEffect(() => {
+    if (!inView || viewedRef.current) return;
+    viewedRef.current = true;
+    registerView(reel.id);
+  }, [inView, reel.id, registerView]);
+
   const toggleMute = () => {
     const video = videoRef.current;
     if (!video) return;
@@ -176,48 +219,67 @@ function ReelItem({ reel }: { reel: Reel }) {
     setMuted(video.muted);
   };
 
-  // images теперь массив (пост может нести несколько файлов) — у reel это одно видео.
-  const videoUrl = resolveImageUrl(reel.images[0]);
-
   return (
     <section
       ref={inViewRef}
-      className="relative flex h-dvh w-full snap-start items-center justify-center md:py-4"
+      className={cn(
+        "relative flex w-full snap-start items-center justify-center md:py-4",
+        REEL_VIEWPORT,
+      )}
     >
-      {/* Карточка видео 9:16: на десктопе — по центру со скруглением, на мобильном — на весь экран.
-          Фон и скругление на самом <video>, чтобы углы были чистыми, а рейл/автор снаружи не обрезались. */}
-      <div className="relative h-full w-screen md:aspect-[9/16] md:h-full md:w-auto">
-        {videoUrl && (
+      {/* Карточка 9:16: на десктопе — по центру со скруглением, на мобильном — на весь экран.
+          Фон и скругление на самом медиа, чтобы углы были чистыми, а рейл/автор снаружи не обрезались. */}
+      <div className="relative h-full w-screen bg-black md:aspect-9/16 md:h-full md:w-auto md:rounded-md">
+        {!mediaUrl || isBroken(filename) ? (
+          <div className="grid size-full place-items-center text-sm text-white/60">Нет медиа</div>
+        ) : isVideo ? (
           <video
             ref={videoRef}
-            src={videoUrl}
-            className="size-full bg-black object-cover md:rounded-md"
+            src={mediaUrl}
+            className="size-full object-cover md:rounded-md"
             loop
             muted
             playsInline
           />
+        ) : (
+          <Image
+            src={mediaUrl}
+            alt={reel.title ?? "Reels"}
+            fill
+            sizes="(max-width: 768px) 100vw, 500px"
+            className="object-cover md:rounded-md"
+            {...imageProps(filename)}
+          />
         )}
 
-        <button
-          type="button"
-          aria-label={muted ? "Включить звук" : "Выключить звук"}
-          onClick={toggleMute}
-          className="absolute bottom-3 right-3 grid size-8 place-items-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
-        >
-          {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
-        </button>
+        {isVideo && (
+          <button
+            type="button"
+            aria-label={muted ? "Включить звук" : "Выключить звук"}
+            onClick={toggleMute}
+            className="absolute right-3 bottom-3 grid size-8 place-items-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
+          >
+            {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+          </button>
+        )}
 
-        {/* Мобильные оверлеи поверх видео. */}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 md:hidden">
+        {/* Мобильные оверлеи поверх медиа. */}
+        <div className="absolute inset-x-0 bottom-0 space-y-2 bg-linear-to-t from-black/70 to-transparent p-4 md:hidden">
           <ReelAuthor reel={reel} tone="light" />
+          {reel.content && (
+            <p className="line-clamp-2 pr-16 text-sm text-white/90">{reel.content}</p>
+          )}
         </div>
-        <div className="absolute bottom-20 right-2 md:hidden">
+        <div className="absolute right-2 bottom-20 md:hidden">
           <ReelActions reel={reel} tone="light" />
         </div>
 
-        {/* Десктоп: автор слева от видео, рейл действий справа — оба вне карточки. */}
-        <div className="absolute bottom-2 right-full mr-6 hidden w-max md:block">
+        {/* Десктоп: автор слева от медиа, рейл действий справа — оба вне карточки. */}
+        <div className="absolute right-full bottom-2 mr-6 hidden w-56 md:block">
           <ReelAuthor reel={reel} tone="dark" />
+          {reel.content && (
+            <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{reel.content}</p>
+          )}
         </div>
         <div className="absolute bottom-0 left-full ml-4 hidden md:block">
           <ReelActions reel={reel} tone="dark" />
@@ -249,15 +311,15 @@ export function ReelsFeed() {
 
   if (reelsQuery.isPending) {
     return (
-      <div className="flex h-dvh items-center justify-center">
-        <Skeleton className="h-[min(88vh,900px)] w-auto max-w-full rounded-md md:aspect-[9/16]" />
+      <div className={cn("flex items-center justify-center", REEL_VIEWPORT)}>
+        <Skeleton className="h-[min(88vh,900px)] w-auto max-w-full rounded-md md:aspect-9/16" />
       </div>
     );
   }
 
   if (reelsQuery.isError) {
     return (
-      <div className="flex h-dvh items-center justify-center text-destructive">
+      <div className={cn("flex items-center justify-center text-destructive", REEL_VIEWPORT)}>
         Не удалось загрузить Reels
       </div>
     );
@@ -265,7 +327,7 @@ export function ReelsFeed() {
 
   if (reels.length === 0) {
     return (
-      <div className="flex h-dvh items-center justify-center text-muted-foreground">
+      <div className={cn("flex items-center justify-center text-muted-foreground", REEL_VIEWPORT)}>
         Пока нет Reels
       </div>
     );
@@ -275,7 +337,10 @@ export function ReelsFeed() {
     <>
       <div
         ref={scrollRef}
-        className="h-dvh w-full snap-y snap-mandatory overflow-y-scroll [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          "scrollbar-none w-full snap-y snap-mandatory overflow-y-scroll [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+          REEL_VIEWPORT,
+        )}
       >
         {reels.map((reel) => (
           <ReelItem key={reel.id} reel={reel} />
