@@ -12,3 +12,4 @@ export { HiddenWordsPanel } from "./HiddenWordsPanel";
 export { MutedPanel } from "./MutedPanel";
 export { LikeCountsPanel } from "./LikeCountsPanel";
 export { ArchivePanel } from "./ArchivePanel";
+export { SessionsPanel } from "./SessionsPanel";

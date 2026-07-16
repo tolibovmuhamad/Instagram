@@ -2,6 +2,8 @@ export interface JwtClaims {
   userId: string;
   userName: string;
   email: string;
+  /** Id сессии; совпадает с id строки в «Активные сеансы». Появился вместе с /Session. */
+  sessionId: string;
   jti: string;
   nbf: number;
   exp: number;

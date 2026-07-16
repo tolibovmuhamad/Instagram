@@ -4,6 +4,7 @@ import * as React from "react"
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar"
 
 import { cn } from "@/lib/utils"
+import { DEFAULT_AVATAR_URL } from "@/lib/utils/image"
 
 function Avatar({
   className,
@@ -25,10 +26,32 @@ function Avatar({
   )
 }
 
-function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props) {
+function AvatarImage({
+  className,
+  src,
+  onLoadingStatusChange,
+  ...props
+}: AvatarPrimitive.Image.Props) {
+  // Загруженный аватар может не отдаться (бэкенд отвечает 401/404 на /images/*). Без подмены
+  // отрисовался бы AvatarFallback с инициалом: пользователь с аватаром выглядел бы буквой,
+  // а пользователь без аватара — привычным силуэтом. Деградируем к тому же силуэту.
+  // Base UI не монтирует <img> при ошибке, поэтому onError на нём не сработал бы —
+  // статус загрузки приходит только через onLoadingStatusChange.
+  // Запоминаем сам сбойный src, а не флаг: при смене аватара он перестаёт совпадать
+  // с текущим, и состояние сбрасывается само, без эффекта.
+  const [failedSrc, setFailedSrc] = React.useState<AvatarPrimitive.Image.Props["src"]>(undefined)
+  const hasFailed = src !== undefined && failedSrc === src
+
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
+      src={hasFailed ? DEFAULT_AVATAR_URL : src}
+      onLoadingStatusChange={(status) => {
+        if (status === "error" && src !== undefined) {
+          setFailedSrc(src)
+        }
+        onLoadingStatusChange?.(status)
+      }}
       className={cn(
         "aspect-square size-full rounded-full object-cover",
         className

@@ -22,6 +22,7 @@ import {
   PrivacyPanel,
   RepostsPanel,
   RestrictedPanel,
+  SessionsPanel,
   StoryLocationPanel,
   TagsMentionsPanel,
 } from "./panels";
@@ -56,6 +57,7 @@ const PANELS: Record<string, () => ReactElement> = {
   apps: AppsAndSitesPanel,
   "accounts-center": ChangePasswordPanel,
   notifications: NotificationsPanel,
+  sessions: SessionsPanel,
   privacy: PrivacyPanel,
   "close-friends": CloseFriendsPanel,
   blocked: BlockedPanel,

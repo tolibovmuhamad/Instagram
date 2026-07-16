@@ -20,6 +20,7 @@ import {
   Lock,
   MessageCircle,
   Monitor,
+  MonitorSmartphone,
   Repeat2,
   Send,
   ShieldCheck,
@@ -63,6 +64,17 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     items: [
       { id: "edit-profile", label: "Редактировать профиль", icon: User },
       { id: "notifications", label: "Уведомления", icon: Bell },
+    ],
+  },
+  {
+    title: "Безопасность",
+    items: [
+      {
+        id: "sessions",
+        label: "Активные сеансы",
+        icon: MonitorSmartphone,
+        subtitle: "Устройства, на которых выполнен вход в ваш аккаунт",
+      },
     ],
   },
   {

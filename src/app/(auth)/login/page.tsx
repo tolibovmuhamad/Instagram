@@ -30,8 +30,8 @@ export default function LoginPage() {
 
   const onSubmit = (values: LoginFormValues) => {
     login.mutate(values, {
-      onSuccess: (token) => {
-        setAuth(token);
+      onSuccess: (tokens) => {
+        setAuth(tokens);
         toast.success("Вы вошли в аккаунт");
         setIsRedirecting(true);
         router.push("/");
