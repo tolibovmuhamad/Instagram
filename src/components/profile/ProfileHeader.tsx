@@ -13,12 +13,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useMyStories } from "@/features/stories/hooks";
-import type { StoryGroup } from "@/features/stories/types";
+import { STORY_RING_CLASS } from "@/components/story/storyRing";
+import { useMyStories, useUserStories } from "@/features/stories/hooks";
+import {
+  getActiveStories,
+  getStoryRing,
+  type StoryGroup,
+  type StoryRing,
+} from "@/features/stories/types";
 import type { UserProfile } from "@/features/users/types";
+import { cn } from "@/lib/utils";
 import { resolveAvatarUrl, resolveImageUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 import { useHighlightsStore } from "@/store/highlights";
+import { useStoryViewsStore } from "@/store/storyViews";
 
 import { HighlightPickerDialog } from "@/components/story/HighlightPickerDialog";
 import { StoryViewer } from "@/components/story/StoryViewer";
@@ -51,6 +59,45 @@ const settingsPlaceholderItems = ["QR-код", "Уведомления"];
 const settingsPlaceholderItems2 = ["Meta Verified", "Родительский контроль", "Входы в аккаунт"];
 const settingsMenuItemClass = "cursor-pointer rounded-none px-4 py-3.5 text-[15px]";
 
+// Аватар чужого профиля: то же кольцо истории, что и в ленте, но без кнопок редактирования
+// (их даёт AvatarEditor на своём профиле). Клик открывает истории — если они есть.
+function StoryRingAvatar({
+  image,
+  userName,
+  storyRing,
+  onClick,
+}: {
+  image: string | null;
+  userName: string;
+  storyRing: StoryRing;
+  onClick?: () => void;
+}) {
+  const hasRing = storyRing !== "none";
+  const avatar = (
+    <Avatar className={cn("size-20 md:size-[150px]", hasRing && "border-2 border-background")}>
+      <AvatarImage src={resolveAvatarUrl(image)} alt={userName} />
+      <AvatarFallback className="text-4xl">{userName.slice(0, 1).toUpperCase()}</AvatarFallback>
+    </Avatar>
+  );
+
+  return (
+    <div className={cn("w-fit rounded-full", hasRing && `${STORY_RING_CLASS[storyRing]} p-[3px]`)}>
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={`Открыть истории: ${userName}`}
+          className="block rounded-full"
+        >
+          {avatar}
+        </button>
+      ) : (
+        avatar
+      )}
+    </div>
+  );
+}
+
 export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderProps) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [followListMode, setFollowListMode] = useState<"subscribers" | "subscriptions" | null>(
@@ -58,8 +105,10 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
   );
   const [isHighlightViewerOpen, setIsHighlightViewerOpen] = useState(false);
   const [isArchiveViewerOpen, setIsArchiveViewerOpen] = useState(false);
+  const [isStoryViewerOpen, setIsStoryViewerOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const logout = useAuthStore((state) => state.logout);
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const displayName = profile.fullName;
 
   // Архив = все мои истории (get-my-stories); в бэкенде они не исчезают. Highlights держим
@@ -70,6 +119,32 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
     () => [...(myStoriesQuery.data ?? [])].sort((a, b) => a.createAt.localeCompare(b.createAt)),
     [myStoriesQuery.data],
   );
+
+  // Чужие истории тянем отдельным запросом: get-my-stories — только свои, а кольцо нужно и
+  // на чужом аватаре. Свой профиль не дёргает лишний раз — там уже есть архив.
+  // Закрытый аккаунт без подписки не трогаем вовсе (та же проверка, что прячет контент в
+  // ProfileView): историй нам всё равно не покажут, а ошибка запроса вылезла бы тостом.
+  const isLocked = !isOwnProfile && profile.isPrivate && !profile.isFollowing;
+  const userStoriesQuery = useUserStories(isOwnProfile || isLocked ? "" : userId);
+  const otherStories = useMemo(
+    () => [...(userStoriesQuery.data ?? [])].sort((a, b) => a.createAt.localeCompare(b.createAt)),
+    [userStoriesQuery.data],
+  );
+
+  // Кольцо горит только за «живые» истории (24 часа), а не за весь архив — иначе оно
+  // светилось бы вечно, ведь бэкенд истории не удаляет. Архив ниже остаётся полным.
+  const activeStories = useMemo(
+    () => getActiveStories(isOwnProfile ? archive : otherStories),
+    [isOwnProfile, archive, otherStories],
+  );
+
+  const markViewedStory = useStoryViewsStore((state) => state.markViewed);
+  const viewedStoryIds = useStoryViewsStore((state) => state.byUser[currentUserId ?? ""]);
+  const storyRing = getStoryRing(activeStories, (id) => !!viewedStoryIds?.includes(id));
+
+  const markViewed = (storyId: number) => {
+    if (currentUserId) markViewedStory(currentUserId, storyId);
+  };
   const highlightIds = useHighlightsStore((state) => state.byUser[userId]) ?? EMPTY_IDS;
   const addHighlights = useHighlightsStore((state) => state.addHighlights);
   const removeHighlight = useHighlightsStore((state) => state.removeHighlight);
@@ -93,6 +168,7 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
 
   const highlightGroup = buildGroup(highlightStories);
   const archiveGroup = buildGroup(archive);
+  const activeGroup = buildGroup(activeStories);
   const highlightCover = highlightStories.length
     ? resolveImageUrl(highlightStories[highlightStories.length - 1].fileName)
     : undefined;
@@ -101,6 +177,10 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
     if (archiveGroup) setIsArchiveViewerOpen(true);
     else toast("В архиве пока нет историй");
   };
+
+  // Клик по аватару открывает ЖИВЫЕ истории (как в оригинале). Архив остаётся на своей
+  // кнопке «Посмотреть архив» — иначе аватар открывал бы истории годичной давности.
+  const handleOpenStories = activeGroup ? () => setIsStoryViewerOpen(true) : undefined;
 
   return (
     <header className="border-b px-4 pb-6 pt-4 md:pb-8 md:pt-8">
@@ -121,16 +201,16 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
                 image={profile.image}
                 fallback={profile.userName}
                 className="size-20 md:size-[150px]"
-                hasStoryRing={archive.length > 0}
-                onAvatarClick={archive.length > 0 ? handleOpenArchive : undefined}
+                storyRing={storyRing}
+                onAvatarClick={handleOpenStories}
               />
             ) : (
-              <Avatar className="size-20 md:size-[150px]">
-                <AvatarImage src={resolveAvatarUrl(profile.image)} alt={profile.userName} />
-                <AvatarFallback className="text-4xl">
-                  {profile.userName.slice(0, 1).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <StoryRingAvatar
+                image={profile.image}
+                userName={profile.userName}
+                storyRing={storyRing}
+                onClick={handleOpenStories}
+              />
             )}
           </div>
 
@@ -292,6 +372,18 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
           </div>
         )}
       </div>
+
+      {/* Вьюер живых историй (клик по аватару). Отмечает просмотр — кольцо гаснет и здесь,
+          и в ленте: и там, и там отметки берутся из useStoryViewsStore. */}
+      {isStoryViewerOpen && activeGroup && (
+        <StoryViewer
+          groups={[activeGroup]}
+          initialGroupIndex={0}
+          onClose={() => setIsStoryViewerOpen(false)}
+          onStoryViewed={markViewed}
+          onAddHighlight={isOwnProfile ? (storyId) => addHighlights(userId, [storyId]) : undefined}
+        />
+      )}
 
       {/* Вьюер «Актуального»: удаление УБИРАЕТ ссылку (история в архиве остаётся). */}
       {isHighlightViewerOpen && highlightGroup && (

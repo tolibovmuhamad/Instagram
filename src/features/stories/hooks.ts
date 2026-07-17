@@ -10,7 +10,7 @@ import {
   likeStory,
   replyToStory,
 } from "./api";
-import { groupStoriesByUser } from "./types";
+import { getActiveStories, groupStoriesByUser, type Story } from "./types";
 
 export const storyKeys = {
   rail: ["stories", "rail"] as const,
@@ -18,11 +18,14 @@ export const storyKeys = {
   byUser: (userId: string) => ["stories", "byUser", userId] as const,
 };
 
+// Лента кружков: только живые истории (24 часа). Фильтр здесь, а не в компоненте, — правило
+// одно на всех потребителей ленты. Свои истории приходят мимо (get-my-stories), их
+// фильтрует StoryAvatarRail.
 export function useStories() {
   return useQuery({
     queryKey: storyKeys.rail,
     queryFn: getStories,
-    select: groupStoriesByUser,
+    select: (stories: Story[]) => groupStoriesByUser(getActiveStories(stories)),
   });
 }
 

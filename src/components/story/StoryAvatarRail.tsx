@@ -3,17 +3,20 @@
 import { useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 
+import { LiveAvatarRail } from "@/components/live/LiveAvatarRail";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMyStories, useStories } from "@/features/stories/hooks";
-import { groupStoriesByUser } from "@/features/stories/types";
+import { getActiveStories, getStoryRing, groupStoriesByUser } from "@/features/stories/types";
 import { useMyProfile } from "@/features/users/hooks";
 import { cn } from "@/lib/utils";
 import { resolveAvatarUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 import { useHighlightsStore } from "@/store/highlights";
+import { useStoryViewsStore } from "@/store/storyViews";
 
 import { CreateStoryDialog } from "./CreateStoryDialog";
+import { STORY_RING_CLASS } from "./storyRing";
 import { StoryViewer } from "./StoryViewer";
 
 export function StoryAvatarRail() {
@@ -23,17 +26,22 @@ export function StoryAvatarRail() {
   const myStoriesQuery = useMyStories();
   const myProfileQuery = useMyProfile();
   const addHighlights = useHighlightsStore((state) => state.addHighlights);
+  // Отметки просмотра переживают перезагрузку (localStorage) — иначе кольцо гасло только
+  // до обновления страницы и снова становилось градиентным.
+  const markViewedStory = useStoryViewsStore((state) => state.markViewed);
+  const viewedStoryIds = useStoryViewsStore((state) => state.byUser[currentUserId ?? ""]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [viewerGroupIndex, setViewerGroupIndex] = useState<number | null>(null);
-  const [viewedStoryIds, setViewedStoryIds] = useState<Set<number>>(new Set());
   const [pickedFile, setPickedFile] = useState<File | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   // get-stories отдаёт только сторис подписок, БЕЗ собственных — свои берём отдельно из
   // get-my-stories, иначе после публикации кружок «Ваша история» остаётся пустым.
+  // get-my-stories — это ВЕСЬ архив (бэкенд истории не удаляет), поэтому оставляем только
+  // живые: иначе кружок горел бы вечно, даже когда показывать уже нечего.
   const ownGroup = useMemo(() => {
-    const mine = myStoriesQuery.data ?? [];
+    const mine = getActiveStories(myStoriesQuery.data ?? []);
     if (mine.length === 0) return undefined;
     const [group] = groupStoriesByUser(mine);
     return group;
@@ -69,20 +77,13 @@ export function StoryAvatarRail() {
   };
 
   const markViewed = (storyId: number) => {
-    setViewedStoryIds((prev) => new Set(prev).add(storyId));
+    if (currentUserId) markViewedStory(currentUserId, storyId);
   };
 
-  const isGroupUnviewed = (groupIndex: number) =>
-    groups[groupIndex].stories.some((story) => !viewedStoryIds.has(story.id));
-
-  // Кольцо истории: зелёное — если это история «только для близких друзей» (audience=1),
-  // как в оригинальном Instagram; иначе градиент (непросмотренные) или серое (просмотренные).
-  const ringClass = (group: (typeof groups)[number], active: boolean) => {
-    if (group.stories.some((story) => story.audience === 1)) return "bg-green-500";
-    return active
-      ? "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600"
-      : "bg-muted";
-  };
+  // Кольцо считает общий с профилем getStoryRing: горит, пока осталась непросмотренная
+  // история, иначе серое. В группах рельса уже только живые истории (см. ownGroup/groups).
+  const ringClass = (group: (typeof groups)[number]) =>
+    STORY_RING_CLASS[getStoryRing(group.stories, (id) => !!viewedStoryIds?.includes(id))];
 
   if (storiesQuery.isPending) {
     return (
@@ -100,7 +101,7 @@ export function StoryAvatarRail() {
         <div
           className={cn(
             "relative flex size-20 items-center justify-center rounded-full p-0.5",
-            ownGroup && ownGroup.stories.length > 0 ? ringClass(ownGroup, true) : "bg-muted",
+            ownGroup && ownGroup.stories.length > 0 ? ringClass(ownGroup) : "bg-muted",
           )}
         >
           {ownGroup && ownGroup.stories.length > 0 ? (
@@ -140,6 +141,9 @@ export function StoryAvatarRail() {
         />
       </div>
 
+      {/* Эфиры идут сразу за своим кружком, перед сторис — как в оригинале. */}
+      <LiveAvatarRail />
+
       {groups
         .filter((group) => group.userId !== currentUserId && group.stories.length > 0)
         .map((group) => {
@@ -151,7 +155,7 @@ export function StoryAvatarRail() {
                 onClick={() => setViewerGroupIndex(groupIndex)}
                 className={cn(
                   "flex size-20 items-center justify-center rounded-full p-0.5",
-                  ringClass(group, isGroupUnviewed(groupIndex)),
+                  ringClass(group),
                 )}
               >
                 <Avatar className="size-full border-2 border-background">

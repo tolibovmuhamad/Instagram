@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutGrid, LogOut, Menu, Moon, Settings, Sun } from "lucide-react";
+import { History, LayoutGrid, LogOut, Menu, Moon, Radio, Settings, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -199,6 +199,23 @@ export function AppSidebar() {
               <span className={labelClass}>Ещё</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-56 p-2">
+              <DropdownMenuItem
+                render={<Link href="/live/start" />}
+                onClick={closeSearch}
+                className="gap-3 rounded-lg px-3 py-2.5"
+              >
+                <Radio className="size-4.5" />
+                Прямой эфир
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                render={<Link href="/live/my" />}
+                onClick={closeSearch}
+                className="gap-3 rounded-lg px-3 py-2.5"
+              >
+                <History className="size-4.5" />
+                Мои эфиры
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 render={<Link href="/settings" />}
                 onClick={closeSearch}

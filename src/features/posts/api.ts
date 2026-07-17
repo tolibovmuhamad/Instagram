@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api/client";
-import { ApiError, type Paginated } from "@/lib/api/types";
+import type { Paginated } from "@/lib/api/types";
 
 import type { Post, PostComment } from "./types";
 
@@ -124,25 +124,13 @@ export interface GetCommentsParams {
   pageSize: number;
 }
 
-// В API нет эндпоинта, отдающего корневые комментарии поста: есть commentCount в самом посте,
-// add/delete/like-comment и get-comment-replies (ответы на КОНКРЕТНЫЙ комментарий, по его id),
-// но получить сами id корневых комментариев нечем. Запрошено у backend-команды как
-// GET /Post/get-comments?postId=… — вызов написан заранее, чтобы список ожил сам, как только
-// эндпоинт появится. Пока его нет, приходит 404: это не ошибка запроса, а отсутствие фичи,
-// поэтому гасим тост и возвращаем null — UI показывает объяснение вместо пустого списка.
-export async function getPostComments(params: GetCommentsParams): Promise<Paginated<PostComment> | null> {
-  try {
-    const { data } = await apiClient.get<Paginated<PostComment>>("/Post/get-comments", {
-      params,
-      skipErrorToast: true,
-    });
-    return data;
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return null;
-    }
-    throw error;
-  }
+// Корневые комментарии поста (без ответов — те отдельно, через get-comment-replies).
+// Эндпоинта долго не существовало, поэтому здесь жил фолбэк на 404; он появился 15.07.2026,
+// фолбэк убран 17.07.2026. Схемы ответа в Swagger нет, форма проверена запросом: обычный
+// пагинированный конверт, DTO совпадает с PostComment.
+export async function getPostComments(params: GetCommentsParams) {
+  const { data } = await apiClient.get<Paginated<PostComment>>("/Post/get-comments", { params });
+  return data;
 }
 
 export interface GetRepliesParams {

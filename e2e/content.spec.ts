@@ -42,23 +42,23 @@ test.describe("Лента и посты", () => {
     await expect(page).toHaveURL(/\/post\/\d+$/, { timeout: 20_000 });
     await expect(page.getByText(caption)).toBeVisible();
 
-    // Комментарий уходит на сервер и сохраняется (add-comment отвечает 200) — признаком
-    // успеха считаем очистку поля ввода. Проверить, что он ПОЯВИЛСЯ В СПИСКЕ, здесь нельзя:
-    // список комментариев API не отдаёт, см. отдельный test.fixme ниже.
+    // Здесь признаком успеха остаётся очистка поля ввода — что комментарий появляется
+    // в списке, отдельно проверяет тест ниже.
     const commentInput = page.getByLabel("Добавить комментарий");
     await commentInput.fill(`e2e comment ${Date.now()}`);
     await page.getByRole("button", { name: "Опубликовать" }).click();
     await expect(commentInput).toHaveValue("");
 
     await page.getByRole("button", { name: "Меню поста" }).click();
-    await page.getByText("Удалить").click();
+    // Именно menuitem: у каждого своего комментария в списке есть своя кнопка «Удалить»,
+    // поэтому getByText("Удалить") находит несколько элементов.
+    await page.getByRole("menuitem", { name: "Удалить" }).click();
     await expect(page).toHaveURL("/");
   });
 
-  // Блокировано бэкендом: в API нет эндпоинта, отдающего корневые комментарии поста
-  // (есть только get-comment-replies по id конкретного комментария). Тест начнёт проходить
-  // сам, как только появится GET /Post/get-comments — см. ROADMAP, «Не сделано».
-  test.fixme("добавленный комментарий виден в списке комментариев", async ({ page }) => {
+  // Был test.fixme, пока в API не было эндпоинта на корневые комментарии поста.
+  // GET /Post/get-comments появился 15.07.2026 — тест включён 17.07.2026.
+  test("добавленный комментарий виден в списке комментариев", async ({ page }) => {
     await page.goto("/create");
     await page.setInputFiles("#post-images", TEST_IMAGE);
     await page.waitForSelector("text=Кадрирование 1 из 1");
@@ -75,6 +75,7 @@ test.describe("Лента и посты", () => {
     await expect(page.getByText(comment)).toBeVisible();
 
     await page.getByRole("button", { name: "Меню поста" }).click();
-    await page.getByText("Удалить").click();
+    await page.getByRole("menuitem", { name: "Удалить" }).click();
+    await expect(page).toHaveURL("/");
   });
 });

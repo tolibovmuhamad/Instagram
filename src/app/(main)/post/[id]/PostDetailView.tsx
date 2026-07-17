@@ -207,7 +207,6 @@ export function PostDetailView({ postId }: { postId: number }) {
                 postId={post.id}
                 comments={commentsQuery.data?.items}
                 isLoading={commentsQuery.isPending}
-                isUnavailable={commentsQuery.isSuccess && commentsQuery.data === null}
                 onReply={handleReply}
               />
             </div>

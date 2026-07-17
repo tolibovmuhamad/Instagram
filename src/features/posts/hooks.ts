@@ -176,7 +176,7 @@ export function useViewPost() {
   return useMutation({ mutationFn: viewPost });
 }
 
-// Возвращает null, пока бэкенд не отдаёт список комментариев (см. getPostComments).
+// Корневые комментарии поста; ответы под ними догружает useCommentReplies.
 export function usePostComments(postId: number) {
   return useQuery({
     queryKey: postKeys.comments(postId),

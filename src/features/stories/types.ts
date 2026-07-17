@@ -34,6 +34,38 @@ export interface StoryGroup {
   stories: Story[];
 }
 
+// Истории живут 24 часа — но ТОЛЬКО по правилам Instagram, не по правилам бэкенда:
+// `get-my-stories` / `get-user-stories` отдают всё за всю жизнь аккаунта и ничего не
+// удаляют (на этом же построен «Архив»). Поэтому «активные» истории — те, за которые горит
+// кольцо и которые открывает вьюер, — отбираем по createAt здесь, на клиенте.
+//
+// `now` параметром, а не Date.now() внутри: иначе поведение не проверить тестом.
+export const STORY_LIFETIME_MS = 24 * 60 * 60 * 1000;
+
+export function isStoryActive(story: Story, now: number = Date.now()): boolean {
+  return now - new Date(story.createAt).getTime() < STORY_LIFETIME_MS;
+}
+
+export function getActiveStories(stories: Story[], now: number = Date.now()): Story[] {
+  if (!Array.isArray(stories)) return [];
+  return stories.filter((story) => isStoryActive(story, now));
+}
+
+// Состояние кольца вокруг аватара. Считается по активным историям автора: пока осталась
+// хоть одна непросмотренная — кольцо «горит» (зелёное для «близких друзей», иначе градиент),
+// всё просмотрено — серое, активных историй нет — кольца нет вовсе.
+export type StoryRing = "unviewed" | "closeFriends" | "viewed" | "none";
+
+export function getStoryRing(
+  activeStories: Story[],
+  isViewed: (storyId: number) => boolean,
+): StoryRing {
+  if (activeStories.length === 0) return "none";
+  const unviewed = activeStories.filter((story) => !isViewed(story.id));
+  if (unviewed.length === 0) return "viewed";
+  return unviewed.some((story) => story.audience === 1) ? "closeFriends" : "unviewed";
+}
+
 // Бэкенд отдаёт сторис плоским списком, без группировки по авторам, а лента-«кружочки»
 // показывает по одному кружку на автора — поэтому группируем на клиенте. Порядок авторов
 // определяется первым вхождением, порядок сторис внутри автора — от старых к новым

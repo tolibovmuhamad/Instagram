@@ -21,8 +21,6 @@ interface CommentListProps {
   postId: number;
   comments: PostComment[] | undefined;
   isLoading?: boolean;
-  /** Бэкенд ещё не отдаёт список комментариев — см. getPostComments. */
-  isUnavailable?: boolean;
   onReply: ReplyHandler;
 }
 
@@ -148,22 +146,11 @@ function CommentThread({
   );
 }
 
-export function CommentList({ postId, comments, isLoading, isUnavailable, onReply }: CommentListProps) {
+export function CommentList({ postId, comments, isLoading, onReply }: CommentListProps) {
   if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center py-10">
         <p className="text-sm text-muted-foreground">Загружаем комментарии…</p>
-      </div>
-    );
-  }
-
-  if (isUnavailable) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 py-10 text-center">
-        <p className="text-sm text-muted-foreground">
-          Комментарии временно недоступны: API не отдаёт их список. Оставить новый комментарий
-          можно — он сохранится.
-        </p>
       </div>
     );
   }
