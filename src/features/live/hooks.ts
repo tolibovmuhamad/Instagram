@@ -111,6 +111,21 @@ export function useLiveStats(streamId: number, enabled: boolean, poll = true) {
   });
 }
 
+/**
+ * Свой незавершённый эфир, если он есть. Нужен, потому что бэкенд разрешает ровно один
+ * активный эфир на пользователя и на второй `start` отвечает 400 «У вас уже идёт активный
+ * эфир.». А зависнуть он может легко: закрыл вкладку — эфир остался «в эфире».
+ */
+export function useMyActiveStream() {
+  return useQuery({
+    queryKey: [...liveKeys.myStreams, "active"],
+    queryFn: async () => {
+      const page = await getMyStreams({ pageNumber: 1, pageSize: 10 });
+      return page.items.find((s) => s.status === "Live") ?? null;
+    },
+  });
+}
+
 export function useMyStreamsInfinite() {
   return useInfiniteQuery({
     queryKey: liveKeys.myStreams,

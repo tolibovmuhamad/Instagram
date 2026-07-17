@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Radio } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { useStartLive } from "@/features/live/hooks";
+import { useEndLive, useMyActiveStream, useStartLive } from "@/features/live/hooks";
 import type { LiveAudience } from "@/features/live/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,11 @@ export function StartLiveView() {
   const [audience, setAudience] = useState<LiveAudience>(0);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const startLive = useStartLive();
+  // Бэкенд разрешает только один активный эфир и на второй отвечает 400. Показываем это
+  // ДО нажатия кнопки, а не тостом с ошибкой после.
+  const activeStream = useMyActiveStream();
+  const endLive = useEndLive();
+  const stuck = activeStream.data;
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +63,9 @@ export function StartLiveView() {
           streamRef.current = null;
           router.push(`/live/${access.streamId}`);
         },
-        onError: () => toast.error("Не удалось начать эфир"),
+        // Своего onError нет намеренно: axios-перехватчик уже показывает тост с текстом
+        // ОТ СЕРВЕРА («У вас уже идёт активный эфир.»). Общее «Не удалось начать эфир»
+        // только прятало настоящую причину.
       },
     );
   };
@@ -65,6 +73,45 @@ export function StartLiveView() {
   return (
     <div className="mx-auto w-full max-w-md space-y-4 p-4 md:py-8">
       <h1 className="text-xl font-semibold">Прямой эфир</h1>
+
+      {/* Эфир мог остаться висеть после закрытия вкладки: сам он не гаснет, а начать
+          второй бэкенд не даст. Предлагаем вернуться или завершить — иначе кнопка «Начать
+          эфир» просто молча ругалась бы 400. */}
+      {stuck && (
+        <div className="space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <div>
+            <p className="text-sm font-medium">У вас уже идёт эфир</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              «{stuck.title || "Без названия"}» — начать второй нельзя. Вернитесь в него или
+              завершите, чтобы начать новый.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={<Link href={`/live/${stuck.streamId}`} />}
+            >
+              Вернуться в эфир
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={endLive.isPending}
+              onClick={() =>
+                endLive.mutate(stuck.streamId, {
+                  onSuccess: () => {
+                    toast.success("Эфир завершён — теперь можно начать новый");
+                    void activeStream.refetch();
+                  },
+                })
+              }
+            >
+              {endLive.isPending ? "Завершаем…" : "Завершить эфир"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="relative aspect-[9/16] overflow-hidden rounded-xl bg-neutral-900">
         {cameraError ? (
@@ -122,7 +169,7 @@ export function StartLiveView() {
       <Button
         type="button"
         onClick={handleStart}
-        disabled={startLive.isPending || !!cameraError}
+        disabled={startLive.isPending || !!cameraError || !!stuck}
         className="w-full gap-2"
       >
         <Radio className="size-4" />
