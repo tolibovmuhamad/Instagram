@@ -20,7 +20,7 @@
 
 - ASP.NET Core 8 Web API, PostgreSQL + EF Core, JWT Bearer, Clean Architecture.
 - Swagger: https://instagram-backend-ea2y.onrender.com/swagger/index.html
-- **Realtime на бэкенде отсутствует.** Нет SignalR/WebSocket. Чат и уведомления реализуются через REST + периодический опрос (polling — React Query `refetchInterval`), **никогда через сокеты**. Онлайн-статус — тоже опрос (`/Presence/get-status`).
+- **Realtime почти везде отсутствует.** Чат, уведомления, счётчики эфира — через REST + периодический опрос (polling — React Query `refetchInterval`). Онлайн-статус — тоже опрос (`/Presence/get-status`). **Единственное исключение — SignalR-хаб `LiveHub` (`/liveHub`)**: по нему бэкенд пушит событие `GuestApproved` с publisher-токеном одобренному гостю эфира (иначе право публиковать не получить, см. раздел «Эфиры»). Больше сокетов нигде нет — не заводить их для чата/уведомлений.
 - CORS разрешает любой origin (`*`) — dev-сервер и деплой на Vercel работают без согласования.
 - Хостится на Render (free tier): сервис засыпает после ~15 мин простоя, первый запрос после сна может ждать до минуты.
 
@@ -102,10 +102,23 @@
 > Там же: **не подменять текст ошибки своим**. Перехватчик axios уже показывает фразу от
 > сервера, а общее «Не удалось начать эфир» её прятало.
 
-> ⚠️ **Одобренный гость не может вещать — баг бэкенда.** Проверено 17.07.2026: после
-> `approve-guest` пользователь появляется в `get-active-guests` и в `guests[]`, но его
-> `join` по-прежнему отдаёт токен с `canPublish: false`. UI заявок сделан целиком, но
-> гость физически не выйдет в эфир, пока бэкенд не начнёт повышать права в токене.
+> ✅ **Эфиры: realtime через SignalR-хаб `LiveHub` (обновлено 17.07.2026).** Единственные
+> сокеты в проекте. Путь `/liveHub` (под `[Authorize]`, токен через `accessTokenFactory`),
+> метод входа в группу эфира — `JoinStream(streamId)`. Всё выяснено запросами к хабу, в
+> Swagger хабов нет. События (payload в camelCase):
+> - **`GuestApproved`** → гостю: publisher-токен после одобрения. Payload = `JoinLiveResultDto`
+>   (`streamId`/`roomName`/`token`/`serverUrl`), внутри токена `canPublish:true`. **Достать
+>   его можно ТОЛЬКО этим событием**: REST `/Live/join` даже одобренному гостю отдаёт
+>   `canPublish:false` (проверено сквозным прогоном 17.07.2026). Приходит адресно, без `JoinStream`.
+> - **`GuestRequestReceived`** → хосту: новая заявка в гости сразу, payload = `LiveGuestRequest`
+>   (`requestId`/`user`/`requestedAt`/`status`). Идёт через группу — нужен `JoinStream`.
+> - Ещё хаб шлёт `ViewerJoined`, `viewercount`, `StreamEnded` — пока не используем (остаётся опрос).
+>
+> Фронт: `features/live/useLiveHub.ts` — одно соединение на экран, раздаёт события по роли.
+> `LiveRoomView` по `GuestApproved` кладёт токен в `guestAccess` и переключает `useLiveRoom`
+> в `publish: true` (переподключение к LiveKit + камера + самопросмотр гостя), а по
+> `GuestRequestReceived` (у хоста) инвалидирует `liveKeys.guestRequests`. Опрос заявок (5 c)
+> оставлен как страховка на случай пропущенного пуша.
 >
 > ⚠️ **`save-to-story` не работает:** записи эфиров не ведутся (`recordingUrl` всегда
 > `null`), сервер отвечает 400 «Нет записи эфира для сохранения в сторис.». Кнопка в UI
