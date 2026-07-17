@@ -1,9 +1,12 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://instagram-backend-ea2y.onrender.com";
 
-// Бэкенд отдаёт в JSON только имя файла (например "665fd3…png"), а не полный URL —
-// статика реально раздаётся с ${API_URL}/images/{filename} (проверено вручную).
+// Бэкенд отдаёт в JSON имя файла (например "665fd3…png") — статика раздаётся с
+// ${API_URL}/images/{filename}. Но при внешнем хранилище (Cloudinary) в том же поле
+// приходит уже готовый абсолютный URL (https://res.cloudinary.com/…) — его отдаём как
+// есть, иначе получилось бы битое ${API_URL}/images/https://… с двойным адресом.
 export function resolveImageUrl(filename: string | null | undefined): string | undefined {
   if (!filename) return undefined;
+  if (/^https?:\/\//i.test(filename)) return filename;
   return `${API_URL}/images/${filename}`;
 }
 

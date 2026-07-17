@@ -20,6 +20,15 @@ describe("resolveImageUrl", () => {
   it("returns undefined for an empty string (backend sometimes sends '' instead of null)", () => {
     expect(resolveImageUrl("")).toBeUndefined();
   });
+
+  it("passes an absolute Cloudinary URL through unchanged", () => {
+    const url = "https://res.cloudinary.com/demo/image/upload/v1/instaclone/images/abc.jpg";
+    expect(resolveImageUrl(url)).toBe(url);
+  });
+
+  it("passes an http absolute URL through unchanged", () => {
+    expect(resolveImageUrl("http://example.com/x.png")).toBe("http://example.com/x.png");
+  });
 });
 
 describe("resolveAvatarUrl", () => {
