@@ -19,6 +19,7 @@ import {
 } from "@/features/notifications/hooks";
 import { NOTIFICATION_TYPE, type AppNotification } from "@/features/notifications/types";
 import { cn } from "@/lib/utils";
+import { dedupeById } from "@/lib/utils/dedupe";
 import { resolveAvatarUrl } from "@/lib/utils/image";
 
 import { FollowRequestsSection } from "./FollowRequestsSection";
@@ -69,7 +70,7 @@ export function NotificationsView() {
   const markAllRead = useMarkAllNotificationsRead();
   const removeNotification = useDeleteNotification();
 
-  const notifications = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const notifications = dedupeById(query.data?.pages.flatMap((page) => page.items) ?? []);
   const { ref, inView } = useInView();
 
   useEffect(() => {

@@ -3,6 +3,7 @@
 import { PostGrid } from "@/components/post/PostGrid";
 import { SearchBox } from "@/components/search/SearchBox";
 import { usePopularPostsInfinite } from "@/features/posts/hooks";
+import { dedupeById } from "@/lib/utils/dedupe";
 
 /**
  * Сетка «Популярное» под строкой поиска — так устроен поиск в мобильном Instagram.
@@ -11,7 +12,7 @@ import { usePopularPostsInfinite } from "@/features/posts/hooks";
  */
 function PopularGrid() {
   const popularQuery = usePopularPostsInfinite(true);
-  const posts = popularQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const posts = dedupeById(popularQuery.data?.pages.flatMap((page) => page.items) ?? []);
 
   return (
     <section>

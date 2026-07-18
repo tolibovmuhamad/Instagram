@@ -103,7 +103,9 @@ export function SettingsView() {
 
   const handleSelect = (id: string) => {
     if (id === "edit-profile") {
-      router.push(userId ? `/profile/${userId}` : "/profile");
+      // Отдельного экрана редактирования нет — открываем диалог на своём профиле
+      // (ProfileHeader читает ?edit=1 и сразу поднимает EditProfileDialog).
+      router.push(userId ? `/profile/${userId}?edit=1` : "/profile?edit=1");
       return;
     }
     router.replace(`/settings?section=${id}`, { scroll: false });

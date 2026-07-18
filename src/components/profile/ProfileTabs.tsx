@@ -9,6 +9,7 @@ import { PostGrid } from "@/components/post/PostGrid";
 import { useUserPostsInfinite } from "@/features/posts/hooks";
 import { useFavoritePostsInfinite } from "@/features/users/hooks";
 import { cn } from "@/lib/utils";
+import { dedupeById } from "@/lib/utils/dedupe";
 
 interface ProfileTabsProps {
   userId: string;
@@ -51,8 +52,8 @@ export function ProfileTabs({ userId, isOwnProfile }: ProfileTabsProps) {
   const postsQuery = useUserPostsInfinite(userId);
   const favoritesQuery = useFavoritePostsInfinite(isOwnProfile && active === "saved");
 
-  const posts = postsQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  const favorites = favoritesQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const posts = dedupeById(postsQuery.data?.pages.flatMap((page) => page.items) ?? []);
+  const favorites = dedupeById(favoritesQuery.data?.pages.flatMap((page) => page.items) ?? []);
 
   const tabs: { id: TabId; icon: LucideIcon; label: string }[] = [
     { id: "posts", icon: Grid, label: "Публикации" },

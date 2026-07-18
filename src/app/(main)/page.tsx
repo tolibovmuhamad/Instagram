@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useFeedInfinite, useFollowingFeedInfinite } from "@/features/posts/hooks";
+import { dedupeById } from "@/lib/utils/dedupe";
 
 type FeedKind = "all" | "following";
 
@@ -28,7 +29,7 @@ export default function FeedPage() {
   const followingQuery = useFollowingFeedInfinite();
 
   const activeQuery = feedKind === "all" ? feedQuery : followingQuery;
-  const posts = activeQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const posts = dedupeById(activeQuery.data?.pages.flatMap((page) => page.items) ?? []);
 
   return (
     // Лента по центру + колонка рекомендаций справа; колонка появляется только когда ей

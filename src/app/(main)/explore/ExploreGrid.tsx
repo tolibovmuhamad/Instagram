@@ -4,16 +4,17 @@ import { Compass } from "lucide-react";
 
 import { PostGrid } from "@/components/post/PostGrid";
 import { useExploreFeedInfinite, usePopularPostsInfinite } from "@/features/posts/hooks";
+import { dedupeById } from "@/lib/utils/dedupe";
 
 export function ExploreGrid() {
   const exploreQuery = useExploreFeedInfinite();
-  const explorePosts = exploreQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const explorePosts = dedupeById(exploreQuery.data?.pages.flatMap((page) => page.items) ?? []);
 
   // У аккаунта без истории персональные рекомендации приходят пустыми — тогда бэкенд
   // предлагает cold-start-ленту популярного. Запрашиваем её, только если это случилось.
   const needsPopular = exploreQuery.isSuccess && explorePosts.length === 0;
   const popularQuery = usePopularPostsInfinite(needsPopular);
-  const popularPosts = popularQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const popularPosts = dedupeById(popularQuery.data?.pages.flatMap((page) => page.items) ?? []);
 
   const activeQuery = needsPopular ? popularQuery : exploreQuery;
   const posts = needsPopular ? popularPosts : explorePosts;

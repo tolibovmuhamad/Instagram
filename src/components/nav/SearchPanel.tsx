@@ -29,11 +29,13 @@ export function SearchPanel({ open, onClose }: SearchPanelProps) {
     <AnimatePresence>
       {open && (
         <>
-          {/* Клик мимо панели закрывает её. Оверлей ниже рейла по z, чтобы рейл оставался
-              кликабельным: в Instagram при открытом поиске навигация продолжает работать. */}
+          {/* Клик мимо панели закрывает её. Оверлей и сама панель лежат НИЖЕ рейла по z
+              (рейл z-40): в Instagram при открытом поиске навигация продолжает работать, а
+              панель выезжает из-за рейла, а не поверх иконок. Оверлей ещё ниже панели —
+              иначе клик по панели закрывал бы её. */}
           <motion.div
             key="overlay"
-            className="fixed inset-0 z-30 hidden md:block"
+            className="fixed inset-0 z-20 hidden md:block"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -44,7 +46,7 @@ export function SearchPanel({ open, onClose }: SearchPanelProps) {
           <motion.aside
             key="panel"
             aria-label="Поиск"
-            className="fixed inset-y-0 left-[72px] z-40 hidden w-[397px] flex-col border-r bg-background shadow-xl md:flex"
+            className="fixed inset-y-0 left-[72px] z-30 hidden w-[397px] flex-col border-r bg-background shadow-xl md:flex"
             initial={{ x: -397, opacity: 0.6 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -397, opacity: 0.6 }}

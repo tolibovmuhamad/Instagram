@@ -6,6 +6,7 @@ import { useInView } from "react-intersection-observer";
 
 import { Button } from "@/components/ui/button";
 import { useBlockedUsersInfinite, useBlockUser, useUnblockUser } from "@/features/block/hooks";
+import { dedupeById } from "@/lib/utils/dedupe";
 
 import { AddUsersDialog, EmptyState, ListStates, PanelIntro, UserRow } from "./_shared";
 
@@ -16,7 +17,7 @@ export function BlockedPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const users = useMemo(
-    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    () => dedupeById(query.data?.pages.flatMap((page) => page.items) ?? []),
     [query.data],
   );
   const ids = useMemo(() => new Set(users.map((u) => u.id)), [users]);

@@ -2,7 +2,8 @@
 
 import { Lock, Plus, Settings } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -101,7 +102,23 @@ function StoryRingAvatar({
 }
 
 export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderProps) {
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Из «Настройки → Редактировать профиль» приходим с ?edit=1 — открываем диалог сразу
+  // (отдельного экрана редактирования нет). Флаг читаем лениво при инициализации состояния,
+  // а эффект только вычищает его из URL, чтобы диалог не открывался повторно при обновлении
+  // страницы или возврате назад.
+  const [isEditOpen, setIsEditOpen] = useState(
+    () => isOwnProfile && searchParams.get("edit") === "1",
+  );
+
+  useEffect(() => {
+    if (isOwnProfile && searchParams.get("edit") === "1") {
+      router.replace(pathname, { scroll: false });
+    }
+  }, [isOwnProfile, searchParams, router, pathname]);
   const [followListMode, setFollowListMode] = useState<"subscribers" | "subscriptions" | null>(
     null,
   );

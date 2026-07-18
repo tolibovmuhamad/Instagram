@@ -28,6 +28,7 @@ import type { Reel } from "@/features/reels/types";
 import { useUserProfile } from "@/features/users/hooks";
 import { useBrokenImage } from "@/lib/hooks/use-broken-image";
 import { cn } from "@/lib/utils";
+import { dedupeById } from "@/lib/utils/dedupe";
 import { resolveAvatarUrl, resolveImageUrl } from "@/lib/utils/image";
 import { isVideoFile } from "@/lib/utils/media";
 import { plural, VIEW_FORMS } from "@/lib/utils/plural";
@@ -294,7 +295,7 @@ export function ReelsFeed() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { ref: sentinelRef, inView } = useInView();
 
-  const reels = reelsQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const reels = dedupeById(reelsQuery.data?.pages.flatMap((page) => page.items) ?? []);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = reelsQuery;
 
   useEffect(() => {

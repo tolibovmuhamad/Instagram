@@ -10,6 +10,7 @@ import {
   useCloseFriendsInfinite,
   useRemoveCloseFriend,
 } from "@/features/close-friends/hooks";
+import { dedupeById } from "@/lib/utils/dedupe";
 
 import { AddUsersDialog, EmptyState, ListStates, PanelIntro, UserRow } from "./_shared";
 
@@ -20,7 +21,7 @@ export function CloseFriendsPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const users = useMemo(
-    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    () => dedupeById(query.data?.pages.flatMap((page) => page.items) ?? []),
     [query.data],
   );
   const ids = useMemo(() => new Set(users.map((u) => u.id)), [users]);
