@@ -62,6 +62,11 @@ export function useLiveHub(streamId: number, enabled: boolean, handlers: LiveHub
     handlersRef.current = handlers;
   });
 
+  // При смене активного аккаунта (мультиаккаунт) хаб надо переподключить с новым токеном:
+  // accessTokenFactory берёт свежий токен, но уже поднятое соединение живёт со старым.
+  // authEpoch меняется на switch/logout — этого достаточно, чтобы пересобрать эффект.
+  const authEpoch = useAuthStore((s) => s.authEpoch);
+
   useEffect(() => {
     if (!enabled) return;
     // Хаб под [Authorize]: без токена подключаться незачем.
@@ -110,5 +115,5 @@ export function useLiveHub(streamId: number, enabled: boolean, handlers: LiveHub
       active = false;
       void connection.stop();
     };
-  }, [streamId, enabled]);
+  }, [streamId, enabled, authEpoch]);
 }

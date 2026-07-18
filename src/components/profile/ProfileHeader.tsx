@@ -14,6 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { STORY_RING_CLASS } from "@/components/story/storyRing";
+import { AccountSwitcherDialog } from "@/components/nav/AccountSwitcherDialog";
+import { useAccounts } from "@/features/auth/useAccounts";
 import { useMyStories, useUserStories } from "@/features/stories/hooks";
 import {
   getActiveStories,
@@ -107,7 +109,8 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
   const [isArchiveViewerOpen, setIsArchiveViewerOpen] = useState(false);
   const [isStoryViewerOpen, setIsStoryViewerOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const logout = useAuthStore((state) => state.logout);
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const { accounts, activeUserId, logoutOne } = useAccounts();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const displayName = profile.fullName;
 
@@ -274,7 +277,23 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
                       </DropdownMenuItem>
                     ))}
                     <DropdownMenuSeparator className="my-0" />
-                    <DropdownMenuItem className={settingsMenuItemClass} onClick={logout}>
+                    <DropdownMenuItem
+                      className={settingsMenuItemClass}
+                      onClick={() => setIsSwitcherOpen(true)}
+                    >
+                      Сменить аккаунт
+                      {accounts.length > 1 && (
+                        <span className="ml-auto text-[13px] text-muted-foreground">
+                          {accounts.length}
+                        </span>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className={settingsMenuItemClass}
+                      onClick={() => {
+                        if (activeUserId) void logoutOne(activeUserId);
+                      }}
+                    >
                       Выйти
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -419,6 +438,10 @@ export function ProfileHeader({ userId, profile, isOwnProfile }: ProfileHeaderPr
 
       {isOwnProfile && (
         <EditProfileDialog open={isEditOpen} onOpenChange={setIsEditOpen} profile={profile} />
+      )}
+
+      {isOwnProfile && (
+        <AccountSwitcherDialog open={isSwitcherOpen} onOpenChange={setIsSwitcherOpen} />
       )}
 
       {followListMode && (

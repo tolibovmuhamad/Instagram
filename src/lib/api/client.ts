@@ -10,6 +10,12 @@ declare module "axios" {
     skipErrorToast?: boolean;
     /** Внутреннее: запрос уже повторяли после обновления токена, второй раз не пробуем. */
     _retried?: boolean;
+    /**
+     * Внутреннее: userId аккаунта, чьим токеном ушёл запрос. Ставится в request-интерцепторе.
+     * При 401 обновляем токен именно этого аккаунта, а не «активного» — активный мог
+     * смениться, пока фоновый запрос был в полёте (см. §4 промпта про мультиаккаунт).
+     */
+    _accountUserId?: string;
   }
 }
 
@@ -19,9 +25,12 @@ export const API_URL =
 export const apiClient = axios.create({ baseURL: API_URL });
 
 apiClient.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const state = useAuthStore.getState();
+  const active = state.accounts.find((a) => a.userId === state.activeUserId);
+  if (active) {
+    config.headers.Authorization = `Bearer ${active.accessToken}`;
+    // Помечаем запрос владельцем-аккаунтом, чтобы при 401 обновить именно его токен.
+    config._accountUserId = active.userId;
   }
   return config;
 });
@@ -45,54 +54,64 @@ export function unwrapEnvelope<T>(body: unknown): T {
   return body.data as T;
 }
 
-// --- Обновление access-токена ---------------------------------------------------
+// --- Обновление access-токена (на каждый аккаунт отдельно) -----------------------
 //
 // Токен живёт 15 минут, а refreshToken одноразовый: бэкенд его ротирует и считает
-// повторное использование атакой — отвечает 401 и завершает ВСЕ сессии пользователя.
-// Значит два параллельных обновления недопустимы, а приложение опрашивает сервер
-// поллингом сразу из нескольких хуков, и по истечении токена 401 прилетает пачкой.
+// повторное использование атакой — отвечает 401 и завершает ВСЕ сессии этого пользователя.
+// Значит два параллельных обновления ОДНОГО аккаунта недопустимы, а приложение опрашивает
+// сервер поллингом сразу из нескольких хуков, и по истечении токена 401 прилетает пачкой.
 //
-// Отсюда две ступени защиты:
-//  1) refreshPromise — одно обновление на вкладку, остальные ждут его результат;
-//  2) Web Locks — сериализация между вкладками; получив лок, проверяем, не обновил ли
-//     токен кто-то другой, пока мы ждали (store синхронизируется через storage-событие,
-//     см. store/auth.ts), и тогда просто берём готовый.
-let refreshPromise: Promise<string> | null = null;
+// В мультиаккаунте дедупликация обязана быть ПО АККАУНТУ (map: userId → Promise), иначе
+// обновление аккаунта A и аккаунта B мешали бы друг другу. Внутри одного аккаунта — две
+// ступени защиты:
+//  1) refreshPromises.get(userId) — одно обновление на вкладку, остальные ждут его результат;
+//  2) Web Locks (имя лока включает userId) — сериализация между вкладками; получив лок,
+//     проверяем, не обновил ли токен кто-то другой, пока мы ждали (store синхронизируется
+//     через storage-событие, см. store/auth.ts), и тогда просто берём готовый.
+const refreshPromises = new Map<string, Promise<string>>();
 
-async function requestNewTokens(staleToken: string | null): Promise<string> {
-  const state = useAuthStore.getState();
-
-  // Пока ждали лок, соседняя вкладка могла всё сделать за нас.
-  if (state.accessToken && state.accessToken !== staleToken) {
-    return state.accessToken;
-  }
-  if (!state.refreshToken) {
+async function requestNewTokens(userId: string, staleToken: string): Promise<string> {
+  const account = useAuthStore.getState().accounts.find((a) => a.userId === userId);
+  if (!account) {
     throw new ApiError("Сессия истекла, войдите заново", 401);
+  }
+  // Пока ждали лок, соседняя вкладка могла всё сделать за нас.
+  if (account.accessToken && account.accessToken !== staleToken) {
+    return account.accessToken;
   }
 
   // Импорт внутри функции: features/auth/api.ts импортирует apiClient из этого модуля,
   // статический импорт замкнул бы цикл.
   const { refreshTokensRequest } = await import("@/features/auth/api");
-  const tokens = await refreshTokensRequest(state.refreshToken);
-  useAuthStore.getState().setAuth(tokens);
+  const tokens = await refreshTokensRequest(account.refreshToken);
+  useAuthStore.getState().updateAccountTokens(userId, tokens);
   return tokens.accessToken;
 }
 
-function refreshAccessToken(staleToken: string | null): Promise<string> {
-  refreshPromise ??= (async () => {
+function refreshAccountToken(userId: string, staleToken: string): Promise<string> {
+  const inFlight = refreshPromises.get(userId);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
     try {
       if (typeof navigator !== "undefined" && navigator.locks) {
-        return await navigator.locks.request("auth-token-refresh", () =>
-          requestNewTokens(staleToken),
+        return await navigator.locks.request(`auth-token-refresh-${userId}`, () =>
+          requestNewTokens(userId, staleToken),
         );
       }
-      return await requestNewTokens(staleToken);
+      return await requestNewTokens(userId, staleToken);
     } finally {
-      refreshPromise = null;
+      refreshPromises.delete(userId);
     }
   })();
 
-  return refreshPromise;
+  refreshPromises.set(userId, promise);
+  return promise;
+}
+
+function bearerToken(config: { headers?: Record<string, unknown> | undefined }): string {
+  const header = config.headers?.Authorization;
+  return typeof header === "string" ? header.replace(/^Bearer\s+/, "") : "";
 }
 
 apiClient.interceptors.response.use(
@@ -128,27 +147,34 @@ apiClient.interceptors.response.use(
   async (error: AxiosError<ApiEnvelope<unknown>>) => {
     const config = error.config;
 
-    // Протух access-токен — обновляем и повторяем запрос один раз.
+    // Протух access-токен — обновляем токен АККАУНТА, чей запрос упал, и повторяем один раз.
     if (error.response?.status === 401 && config && !config._retried) {
-      const staleToken = useAuthStore.getState().accessToken;
-      if (useAuthStore.getState().refreshToken) {
+      const userId = config._accountUserId;
+      const account = userId
+        ? useAuthStore.getState().accounts.find((a) => a.userId === userId)
+        : undefined;
+      if (userId && account) {
         config._retried = true;
-        try {
-          const accessToken = await refreshAccessToken(staleToken);
-          config.headers.Authorization = `Bearer ${accessToken}`;
-          return await apiClient(config);
-        } catch {
-          // Обновиться не вышло — ниже отработает обычный выход из аккаунта.
+        if (account.refreshToken) {
+          try {
+            const accessToken = await refreshAccountToken(userId, bearerToken(config));
+            config.headers.Authorization = `Bearer ${accessToken}`;
+            return await apiClient(config);
+          } catch {
+            // Обновиться не вышло (refresh невалиден / аккаунт забанен) — убираем этот
+            // аккаунт из списка. Если он был активным, стор активирует следующий, а
+            // AuthGuard уведёт на логин, когда аккаунтов не останется.
+            useAuthStore.getState().removeAccount(userId);
+          }
+        } else {
+          // Токен мёртв, а обновить его нечем — этот аккаунт больше не рабочий.
+          useAuthStore.getState().removeAccount(userId);
         }
       }
     }
 
     const envelope = error.response?.data;
     const message = extractMessage(envelope?.errors, error.message || "Произошла ошибка");
-
-    if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
-    }
 
     if (!config?.skipErrorToast) {
       toast.error(message);

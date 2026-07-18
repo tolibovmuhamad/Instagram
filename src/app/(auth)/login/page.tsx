@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -14,10 +15,25 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { useLogin } from "@/features/auth/hooks";
 import { loginSchema, type LoginFormValues } from "@/features/auth/schemas";
+import { enrichActiveAccountProfile } from "@/features/auth/useAccounts";
 import { useAuthStore } from "@/store/auth";
 
 export default function LoginPage() {
+  // useSearchParams требует Suspense-границу при пререндере страницы.
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // «Добавить аккаунт» — тот же экран логина, но он не затирает список: setAuth добавляет
+  // новый аккаунт и делает его активным. Флаг меняет только заголовки/тосты.
+  const isAddingAccount = searchParams.get("add") === "1";
+  const queryClient = useQueryClient();
   const setAuth = useAuthStore((state) => state.setAuth);
   const login = useLogin();
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -30,9 +46,13 @@ export default function LoginPage() {
 
   const onSubmit = (values: LoginFormValues) => {
     login.mutate(values, {
-      onSuccess: (tokens) => {
+      onSuccess: async (tokens) => {
         setAuth(tokens);
-        toast.success("Вы вошли в аккаунт");
+        // Сбрасываем кэш прошлого аккаунта (актуально для «Добавить аккаунт»), затем
+        // дозаполняем профиль нового активного аккаунта — оба уже под новым токеном.
+        queryClient.clear();
+        await enrichActiveAccountProfile();
+        toast.success(isAddingAccount ? "Аккаунт добавлен" : "Вы вошли в аккаунт");
         setIsRedirecting(true);
         router.push("/");
       },
@@ -64,7 +84,14 @@ export default function LoginPage() {
             <BrandIcon className="h-16 w-16 rounded-2xl" />
           </div>
 
-          <h1 className="text-lg font-semibold">Вход в аккаунт</h1>
+          <h1 className="text-lg font-semibold">
+            {isAddingAccount ? "Добавить аккаунт" : "Вход в аккаунт"}
+          </h1>
+          {isAddingAccount && (
+            <p className="-mt-3 text-center text-sm text-muted-foreground">
+              Войдите в ещё один аккаунт — текущий останется в списке.
+            </p>
+          )}
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <FieldGroup>

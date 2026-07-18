@@ -1,7 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { History, LayoutGrid, LogOut, Menu, Moon, Radio, Settings, Sun } from "lucide-react";
+import {
+  History,
+  LayoutGrid,
+  LogOut,
+  Menu,
+  Moon,
+  Radio,
+  Repeat,
+  Settings,
+  Sun,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -14,12 +24,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAccounts } from "@/features/auth/useAccounts";
 import { useUnreadNotificationCount } from "@/features/notifications/hooks";
 import { useMyProfile } from "@/features/users/hooks";
 import { cn } from "@/lib/utils";
 import { resolveAvatarUrl } from "@/lib/utils/image";
 import { useAuthStore } from "@/store/auth";
 
+import { AccountSwitcherDialog } from "./AccountSwitcherDialog";
 import { NAV_ITEMS } from "./nav-items";
 import { SearchPanel } from "./SearchPanel";
 
@@ -57,11 +69,12 @@ const labelClass =
 export function AppSidebar() {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
+  const { accounts, activeUserId, logoutOne } = useAccounts();
   const profileQuery = useMyProfile();
   const unreadCount = useUnreadNotificationCount();
   const { resolvedTheme, setTheme } = useTheme();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
 
   const profileHref = user ? `/profile/${user.id}` : "/profile";
   const isProfileActive = !!user && pathname === `/profile/${user.id}`;
@@ -232,7 +245,24 @@ export function AppSidebar() {
                 Сменить оформление
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-3 rounded-lg px-3 py-2.5" onClick={logout}>
+              <DropdownMenuItem
+                className="gap-3 rounded-lg px-3 py-2.5"
+                onClick={() => setSwitcherOpen(true)}
+              >
+                <Repeat className="size-4.5" />
+                Сменить аккаунт
+                {accounts.length > 1 && (
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {accounts.length}
+                  </span>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-3 rounded-lg px-3 py-2.5"
+                onClick={() => {
+                  if (activeUserId) void logoutOne(activeUserId);
+                }}
+              >
                 <LogOut className="size-4.5" />
                 Выйти
               </DropdownMenuItem>
@@ -254,6 +284,7 @@ export function AppSidebar() {
       </nav>
 
       <SearchPanel open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <AccountSwitcherDialog open={switcherOpen} onOpenChange={setSwitcherOpen} />
     </>
   );
 }

@@ -35,6 +35,20 @@ export async function refreshTokensRequest(refreshToken: string) {
   return unwrapEnvelope<AuthTokens>(response.data);
 }
 
+/**
+ * Отзыв конкретной сессии на сервере при выходе из аккаунта.
+ *
+ * Идёт мимо apiClient и с явным заголовком: в мультиаккаунте выйти можно из ФОНОВОГО
+ * аккаунта, чей токен не активен, — интерцептор подставил бы токен активного и отозвал не ту
+ * сессию. Best-effort: результат не критичен (локально аккаунт всё равно убираем), ошибки
+ * глушим у вызывающего.
+ */
+export async function logoutRequest(accessToken: string) {
+  await axios.post(`${API_URL}/Account/logout`, null, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
 export async function forgotPasswordRequest(values: ForgotPasswordFormValues) {
   const { data } = await apiClient.delete<string>("/Account/ForgotPassword", {
     params: { Email: values.email },
